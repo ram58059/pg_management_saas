@@ -1,0 +1,133 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Receipt #{{ invoice.id }} - PG Management{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto my-8 print:my-0">
+    <!-- Print Button -->
+    <div class="flex justify-end mb-4 print:hidden">
+        <button onclick="window.print()" class="btn-primary flex items-center bg-gray-800 hover:bg-gray-900">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            Print Receipt
+        </button>
+    </div>
+
+    <!-- Receipt Card -->
+    <div class="card p-10 print:shadow-none print:border-none print:p-0">
+        <!-- Header -->
+        <div class="flex justify-between items-start border-b pb-8 mb-8">
+            <div>
+                <h1 class="text-4xl font-black text-gray-900 tracking-tight">{{ invoice.tenant.pg_property.name }}</h1>
+                <p class="text-gray-500 mt-2 max-w-xs">{{ invoice.tenant.pg_property.address }}</p>
+            </div>
+            <div class="text-right">
+                <div class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-1">Receipt Number</div>
+                <div class="text-2xl font-bold text-gray-900">#INV-{{ invoice.id }}</div>
+                <div class="mt-4">
+                    <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full uppercase">
+                        {{ invoice.get_status_display }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tenant Details -->
+        <div class="grid grid-cols-2 gap-8 mb-10">
+            <div>
+                <h3 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-2">Billed To</h3>
+                <p class="font-bold text-gray-900 text-lg">{{ invoice.tenant.user.get_full_name }}</p>
+                <p class="text-gray-600">Room {{ invoice.tenant.room.room_number }}</p>
+                <p class="text-gray-600">{{ invoice.tenant.user.email }}</p>
+                <p class="text-gray-600">{{ invoice.tenant.user.phone_number }}</p>
+            </div>
+            <div class="text-right">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-2">Invoice Details</h3>
+                <p class="text-gray-600"><span class="font-medium">Billing Month:</span> <span class="font-bold text-gray-900">{{ invoice.billing_month|date:"F Y" }}</span></p>
+                <p class="text-gray-600"><span class="font-medium">Issued Date:</span> {{ invoice.created_at|date:"d M Y" }}</p>
+                <p class="text-gray-600"><span class="font-medium">Due Date:</span> {{ invoice.due_date|date:"d M Y" }}</p>
+            </div>
+        </div>
+
+        <!-- Line Items -->
+        <table class="w-full mb-10">
+            <thead>
+                <tr class="border-b-2 border-gray-200 text-left text-sm font-bold uppercase tracking-wider text-gray-500">
+                    <th class="py-3">Description</th>
+                    <th class="py-3 text-right">Amount</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 text-gray-700">
+                <tr>
+                    <td class="py-4">
+                        <div class="font-bold text-gray-900">Room Rent</div>
+                        <div class="text-sm text-gray-500">Base rent for {{ invoice.billing_month|date:"F Y" }}</div>
+                    </td>
+                    <td class="py-4 text-right font-medium text-lg">₹{{ invoice.rent_amount }}</td>
+                </tr>
+                {% if invoice.electricity_amount > 0 %}
+                <tr>
+                    <td class="py-4">
+                        <div class="font-bold text-gray-900">Electricity Bill</div>
+                        <div class="text-sm text-gray-500">Apportioned charges for {{ invoice.billing_month|date:"F Y" }}</div>
+                    </td>
+                    <td class="py-4 text-right font-medium text-lg">₹{{ invoice.electricity_amount }}</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+
+        <!-- Totals -->
+        <div class="border-t-2 border-gray-200 pt-6 flex justify-end">
+            <div class="w-1/2 md:w-1/3">
+                <div class="flex justify-between mb-3 text-gray-600">
+                    <span>Total Billed:</span>
+                    <span class="font-bold text-gray-900">₹{{ invoice.total_amount }}</span>
+                </div>
+                <div class="flex justify-between mb-4 text-gray-600 border-b pb-4">
+                    <span>Total Paid:</span>
+                    <span class="font-bold text-emerald-600">- ₹{{ invoice.amount_paid }}</span>
+                </div>
+                <div class="flex justify-between text-xl">
+                    <span class="font-bold text-gray-900">Balance Due:</span>
+                    <span class="font-black {% if invoice.remaining_due > 0 %}text-red-600{% else %}text-emerald-600{% endif %}">₹{{ invoice.remaining_due }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Payment Records -->
+        {% if payments %}
+        <div class="mt-12 pt-8 border-t border-dashed border-gray-300">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Payment Records</h3>
+            <table class="w-full text-sm text-left text-gray-600">
+                <thead class="bg-gray-50 text-gray-500 uppercase text-xs font-bold">
+                    <tr>
+                        <th class="py-2 px-3 rounded-l-lg">Date</th>
+                        <th class="py-2 px-3">Method</th>
+                        <th class="py-2 px-3">Reference/UTR</th>
+                        <th class="py-2 px-3 text-right rounded-r-lg">Amount</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for p in payments %}
+                    <tr>
+                        <td class="py-3 px-3">{{ p.payment_date|date:"d M Y" }}</td>
+                        <td class="py-3 px-3">{{ p.get_payment_method_display }}</td>
+                        <td class="py-3 px-3 font-mono text-xs">
+                            {% if p.proof %}{{ p.proof.utr_number }}{% elif p.transaction_id %}{{ p.transaction_id }}{% else %}--{% endif %}
+                        </td>
+                        <td class="py-3 px-3 text-right font-bold text-gray-900">₹{{ p.amount }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+        
+        <div class="mt-12 text-center text-sm text-gray-400">
+            <p>This is a computer-generated receipt and does not require a physical signature.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

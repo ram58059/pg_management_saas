@@ -1,0 +1,103 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Pay Rent - PG Management{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-8">
+        <a href="{% url 'tenant_payments' %}" class="text-indigo-600 hover:text-indigo-800 font-medium text-sm flex items-center mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Invoices
+        </a>
+        <h1 class="text-3xl font-black text-gray-900 tracking-tight">Pay Rent: {{ invoice.billing_month|date:"F Y" }}</h1>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Payment Details & Form -->
+        <div class="card p-6">
+            <h3 class="text-xl font-bold mb-6 text-gray-900 border-b pb-4">Payment Details</h3>
+            
+            <div class="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-100 space-y-3">
+                <div class="flex justify-between">
+                    <span class="text-gray-500 font-medium">Rent Amount</span>
+                    <span class="font-semibold text-gray-900">₹{{ invoice.rent_amount }}</span>
+                </div>
+                {% if invoice.electricity_amount > 0 %}
+                <div class="flex justify-between">
+                    <span class="text-gray-500 font-medium">Electricity</span>
+                    <span class="font-semibold text-gray-900">₹{{ invoice.electricity_amount }}</span>
+                </div>
+                {% endif %}
+                <div class="border-t border-gray-200 pt-3 flex justify-between">
+                    <span class="text-gray-700 font-bold">Total Due</span>
+                    <span class="font-black text-xl text-red-600">₹{{ remaining_due }}</span>
+                </div>
+            </div>
+            
+            <form method="POST">
+                {% csrf_token %}
+                <div class="mb-6">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Amount to Pay Now (₹)</label>
+                    <input type="number" name="amount" value="{{ remaining_due }}" step="0.01" max="{{ remaining_due }}" required class="input-field text-xl font-bold text-gray-900">
+                    <p class="text-xs text-gray-500 mt-2">You can make a partial payment if needed.</p>
+                </div>
+                
+                <button type="submit" class="w-full btn-primary py-4 text-lg font-bold shadow-lg hover:shadow-xl flex justify-center items-center">
+                    Proceed to Upload Proof
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                </button>
+            </form>
+        </div>
+        
+        <!-- QR Code & Instructions -->
+        <div class="card p-6 bg-gradient-to-br from-indigo-50 to-white border border-indigo-100">
+            <h3 class="text-xl font-bold mb-2 text-indigo-900">Scan & Pay via UPI</h3>
+            <p class="text-sm text-indigo-700 mb-6">Use GPay, PhonePe, Paytm, or any UPI app.</p>
+            
+            <div class="flex flex-col items-center justify-center py-4">
+                {% if settings and settings.qr_code_image %}
+                    <div class="bg-white p-4 rounded-2xl shadow-md border border-indigo-100 mb-4">
+                        <img src="{{ settings.qr_code_image.url }}" alt="UPI QR Code" class="w-64 h-64 object-contain">
+                    </div>
+                    
+                    <div class="text-center w-full bg-white p-4 rounded-xl border border-indigo-50 shadow-sm mt-2">
+                        <div class="text-xs text-gray-500 uppercase tracking-wider font-bold mb-1">UPI ID</div>
+                        <div class="font-mono text-lg font-bold text-gray-900 mb-3">{{ settings.upi_id }}</div>
+                        
+                        <div class="text-xs text-gray-500 uppercase tracking-wider font-bold mb-1">Name</div>
+                        <div class="font-bold text-gray-900">{{ settings.account_holder_name }}</div>
+                    </div>
+                {% else %}
+                    <div class="text-center text-gray-500 py-12">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-3 text-indigo-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <p class="font-medium">No QR Code provided by owner.</p>
+                        <p class="text-sm mt-1">Please contact the owner for payment details.</p>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-yellow-800">Important Instruction</h3>
+                        <div class="mt-1 text-sm text-yellow-700">
+                            <p>After paying, take a screenshot of the success screen and note down the 12-digit UTR/Reference Number. You will need it on the next step.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

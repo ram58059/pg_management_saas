@@ -1,0 +1,80 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Properties | PG Management{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Properties</h1>
+        <p class="text-sm text-gray-500 mt-1">Manage all your PG branches and buildings.</p>
+    </div>
+    <a href="{% url 'property_create' %}" class="btn-primary flex items-center space-x-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        <span>Add Property</span>
+    </a>
+</div>
+
+{% if properties %}
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        {% for prop in properties %}
+        <div class="card hover:shadow-md transition-shadow duration-300">
+            <div class="p-5 border-b border-gray-100 flex justify-between items-start">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900">{{ prop.name }}</h3>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 bg-blue-100 text-blue-800">
+                        {{ prop.get_pg_type_display }}
+                    </span>
+                </div>
+                <div class="flex space-x-2">
+                    <a href="{% url 'property_update' prop.pk %}" class="text-gray-400 hover:text-primary-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    </a>
+                    <a href="{% url 'property_delete' prop.pk %}" class="text-gray-400 hover:text-red-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </a>
+                </div>
+            </div>
+            <div class="p-5">
+                <div class="text-sm text-gray-500 mb-4 line-clamp-2 min-h-[40px]">
+                    <svg class="w-4 h-4 inline-block mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    {{ prop.address }}
+                </div>
+                
+                <div class="grid grid-cols-3 gap-4 text-center border-t border-gray-100 pt-4 mt-2">
+                    <div>
+                        <div class="text-xs text-gray-500 uppercase tracking-wider">Rooms</div>
+                        <div class="text-xl font-semibold text-gray-900 mt-1">{{ prop.total_rooms }}</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500 uppercase tracking-wider">Capacity</div>
+                        <div class="text-xl font-semibold text-gray-900 mt-1">{{ prop.total_capacity }}</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500 uppercase tracking-wider">Occupied</div>
+                        <div class="text-xl font-semibold text-primary-600 mt-1">{{ prop.occupied_beds }}</div>
+                    </div>
+                </div>
+                
+                <div class="mt-5">
+                    <a href="{% url 'rooms_list' %}?property={{ prop.id }}" class="w-full block text-center py-2 px-4 border border-gray-200 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                        View Rooms
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card p-12 text-center">
+        <div class="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No properties found</h3>
+        <p class="text-gray-500 mb-6 max-w-md mx-auto">You haven't added any PG properties yet. Create your first property to start managing rooms and tenants.</p>
+        <a href="{% url 'property_create' %}" class="btn-primary inline-flex items-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Add First Property
+        </a>
+    </div>
+{% endif %}
+{% endblock %}

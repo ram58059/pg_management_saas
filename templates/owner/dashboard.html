@@ -1,0 +1,49 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block title %}Owner Dashboard - PG Management{% endblock %}
+
+{% block content %}
+<div class="mb-8 flex justify-between items-end">
+    <div>
+        <h1 class="text-3xl font-black text-gray-900 tracking-tight">Owner Dashboard</h1>
+        <p class="text-gray-500 font-medium mt-1">Overview of all your PG properties</p>
+    </div>
+    <div class="flex space-x-3">
+        <a href="{% url 'payment_settings' %}" class="btn-primary bg-indigo-600 hover:bg-indigo-700">UPI Settings</a>
+        <a href="{% url 'payment_verifications' %}" class="btn-primary bg-emerald-600 hover:bg-emerald-700 relative">
+            Verify Payments
+            {% if pending_verifications_count %}
+            <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">
+                {{ pending_verifications_count }}
+            </span>
+            {% endif %}
+        </a>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="card p-6 border-l-4 border-l-primary-500 hover:shadow-md transition-shadow">
+        <div class="text-gray-500 text-sm font-semibold uppercase tracking-wider mb-1">Properties</div>
+        <div class="text-4xl font-black text-gray-900">{{ properties_count }}</div>
+    </div>
+    
+    <div class="card p-6 border-l-4 border-l-emerald-500 hover:shadow-md transition-shadow">
+        <div class="text-gray-500 text-sm font-semibold uppercase tracking-wider mb-1">Occupancy</div>
+        <div class="flex items-baseline space-x-2">
+            <div class="text-4xl font-black text-gray-900">{{ occupied_beds }}</div>
+            <div class="text-gray-500 font-medium text-lg">/ {{ total_capacity }}</div>
+        </div>
+    </div>
+    
+    <div class="card p-6 border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
+        <div class="text-gray-500 text-sm font-semibold uppercase tracking-wider mb-1">Monthly Revenue</div>
+        <div class="text-4xl font-black text-gray-900">₹{{ revenue_this_month }}</div>
+    </div>
+    
+    <div class="card p-6 border-l-4 border-l-red-500 hover:shadow-md transition-shadow">
+        <div class="text-gray-500 text-sm font-semibold uppercase tracking-wider mb-1">Pending Dues</div>
+        <div class="text-4xl font-black text-gray-900">₹{{ pending_payments }}</div>
+    </div>
+</div>
+{% endblock %}

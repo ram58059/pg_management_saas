@@ -1,0 +1,31 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="py-20 text-center max-w-4xl mx-auto">
+    <div class="inline-flex items-center space-x-2 bg-indigo-50 text-indigo-700 px-4 py-2 rounded-full font-medium text-sm mb-8 border border-indigo-100">
+        <span class="flex h-2 w-2 relative">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+        </span>
+        <span>The #1 platform for PG & Hostel Management</span>
+    </div>
+    
+    <h1 class="text-6xl font-black text-gray-900 tracking-tight mb-8 leading-tight">
+        Manage your PG properties with <span class="bg-gradient-to-r from-primary-600 to-indigo-600 bg-clip-text text-transparent">absolute ease</span>
+    </h1>
+    
+    <p class="text-xl text-gray-600 mb-12 max-w-2xl mx-auto leading-relaxed">
+        Everything you need to run your hostel business: tenant onboarding, room allocation, automated billing, and seamless UPI payments.
+    </p>
+    
+    <div class="flex items-center justify-center space-x-6">
+        <a href="{% url 'owner_login' %}" class="px-8 py-4 bg-primary-600 text-white rounded-xl font-semibold text-lg hover:bg-primary-700 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
+            Owner Portal
+        </a>
+        <a href="{% url 'tenant_login' %}" class="px-8 py-4 bg-white text-gray-800 border border-gray-200 rounded-xl font-semibold text-lg hover:bg-gray-50 transition-all shadow-sm">
+            Tenant Portal
+        </a>
+    </div>
+</div>
+{% endblock %}

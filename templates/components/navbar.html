@@ -1,0 +1,49 @@
+<nav class="bg-white shadow-sm border-b border-gray-100">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-20">
+            <div class="flex items-center">
+                <a href="{% url 'landing' %}" class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-md">
+                        P
+                    </div>
+                    <span class="text-2xl font-black bg-gradient-to-r from-primary-700 to-primary-500 bg-clip-text text-transparent tracking-tight">
+                        PG SaaS
+                    </span>
+                </a>
+            </div>
+            
+            <div class="flex items-center space-x-6">
+                {% if user.is_authenticated %}
+                    {% if user.is_owner %}
+                        <a href="{% url 'owner_dashboard' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Dashboard</a>
+                        <a href="{% url 'properties_list' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Properties</a>
+                        <a href="{% url 'rooms_list' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Rooms</a>
+                        <a href="{% url 'tenants_list' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Tenants</a>
+                        <a href="{% url 'invoice_list' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Finances</a>
+                    {% elif user.is_tenant %}
+                        <a href="{% url 'tenant_dashboard' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Dashboard</a>
+                        <a href="{% url 'tenant_payments' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Invoices</a>
+                        <a href="{% url 'tenant_payment_history' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Payment History</a>
+                    {% endif %}
+                    
+                    <div class="h-8 w-px bg-gray-200 mx-2"></div>
+                    
+                    <div class="flex items-center space-x-3">
+                        <div class="text-right hidden md:block">
+                            <div class="text-sm font-semibold text-gray-900">{{ user.get_full_name }}</div>
+                            <div class="text-xs text-gray-500">{{ user.get_role_display }}</div>
+                        </div>
+                        <a href="{% url 'logout' %}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm">
+                            Logout
+                        </a>
+                    </div>
+                {% else %}
+                    <a href="{% url 'tenant_login' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Tenant Login</a>
+                    <a href="{% url 'owner_login' %}" class="px-6 py-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-all shadow-md hover:shadow-lg font-medium">
+                        Owner Login
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</nav>

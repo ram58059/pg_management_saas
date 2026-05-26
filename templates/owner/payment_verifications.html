@@ -1,0 +1,152 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Verify Payments - PG Management{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-black text-gray-900 tracking-tight">Payment Verifications</h1>
+    <p class="text-gray-500 font-medium mt-1">Review and approve tenant rent payments</p>
+</div>
+
+<div class="card p-6 mb-8 border-t-4 border-t-indigo-500">
+    <form method="GET" class="flex items-end space-x-4">
+        <div class="flex-grow">
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Filter by Property</label>
+            <select name="property" class="input-field mt-1 block w-full" onchange="this.form.submit()">
+                <option value="">-- All Properties --</option>
+                {% for prop in properties %}
+                <option value="{{ prop.id }}" {% if prop.id == selected_property_id %}selected{% endif %}>{{ prop.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </form>
+</div>
+
+{% if payments %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for payment in payments %}
+    <div class="card p-5 border border-indigo-100 hover:border-indigo-300 transition-colors">
+        <div class="flex justify-between items-start mb-4">
+            <div>
+                <h3 class="font-bold text-gray-900 text-lg">{{ payment.invoice.tenant.user.get_full_name }}</h3>
+                <p class="text-sm text-gray-500">{{ payment.invoice.tenant.pg_property.name }} - Room {{ payment.invoice.tenant.room.room_number }}</p>
+            </div>
+            <div class="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold">
+                {{ payment.invoice.billing_month|date:"M Y" }}
+            </div>
+        </div>
+        
+        <div class="space-y-2 mb-4 text-sm bg-gray-50 p-3 rounded-lg border border-gray-100">
+            <div class="flex justify-between">
+                <span class="text-gray-500">Amount:</span>
+                <span class="font-bold text-gray-900">₹{{ payment.amount }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-gray-500">UTR No:</span>
+                <span class="font-mono font-medium text-gray-800">{{ payment.proof.utr_number }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-gray-500">Uploaded:</span>
+                <span class="font-medium text-gray-800">{{ payment.proof.uploaded_at|timesince }} ago</span>
+            </div>
+        </div>
+        
+        <button onclick="openVerificationModal('modal-{{ payment.id }}')" class="w-full btn-primary bg-indigo-600 hover:bg-indigo-700 py-2 mb-2 flex justify-center items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            Review Proof
+        </button>
+    </div>
+    
+    <!-- Modal for this payment -->
+    <div id="modal-{{ payment.id }}" class="fixed inset-0 z-50 hidden bg-black bg-opacity-75 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+            <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="font-bold text-lg text-gray-900">Payment Proof Verification</h3>
+                <button onclick="closeVerificationModal('modal-{{ payment.id }}')" class="text-gray-400 hover:text-gray-600 p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto flex-grow flex flex-col md:flex-row gap-6">
+                <div class="md:w-1/2">
+                    <div class="border rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center min-h-[300px]">
+                        {% if payment.proof.screenshot %}
+                        <img src="{{ payment.proof.screenshot.url }}" alt="Payment Proof" class="max-w-full max-h-full object-contain">
+                        {% else %}
+                        <p class="text-gray-500 font-medium">No image provided</p>
+                        {% endif %}
+                    </div>
+                    <div class="mt-2 text-center text-sm text-gray-500 font-mono">UTR: {{ payment.proof.utr_number }}</div>
+                </div>
+                
+                <div class="md:w-1/2 flex flex-col justify-center space-y-4">
+                    <div class="bg-indigo-50 p-4 rounded-lg">
+                        <div class="text-sm text-indigo-700 font-semibold uppercase mb-1">Payment Details</div>
+                        <div class="text-2xl font-black text-indigo-900 mb-2">₹{{ payment.amount }}</div>
+                        <div class="font-medium text-indigo-800">{{ payment.invoice.tenant.user.get_full_name }}</div>
+                        <div class="text-sm text-indigo-600">{{ payment.invoice.tenant.pg_property.name }}, Room {{ payment.invoice.tenant.room.room_number }}</div>
+                        <div class="text-sm text-indigo-600 mt-2 border-t border-indigo-200 pt-2">For: {{ payment.invoice.billing_month|date:"F Y" }} Rent</div>
+                    </div>
+                    
+                    <form action="{% url 'verify_payment' payment.id %}" method="POST" class="mt-auto space-y-3">
+                        {% csrf_token %}
+                        
+                        <div id="rejection-container-{{ payment.id }}" class="hidden mb-3">
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Reason for Rejection</label>
+                            <textarea name="rejection_reason" class="input-field w-full text-sm" rows="2" placeholder="Tell the tenant why this was rejected..."></textarea>
+                        </div>
+                        
+                        <div class="flex space-x-3">
+                            <button type="submit" name="action" value="APPROVE" class="flex-1 bg-emerald-600 text-white py-3 rounded-lg font-bold hover:bg-emerald-700 transition shadow-md hover:shadow-lg flex justify-center items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                Approve
+                            </button>
+                            <button type="button" onclick="toggleRejection('{{ payment.id }}')" id="reject-btn-{{ payment.id }}" class="flex-1 bg-red-100 text-red-700 py-3 rounded-lg font-bold hover:bg-red-200 transition border border-red-200">
+                                Reject...
+                            </button>
+                            <button type="submit" name="action" value="REJECT" id="confirm-reject-{{ payment.id }}" class="hidden flex-1 bg-red-600 text-white py-3 rounded-lg font-bold hover:bg-red-700 transition shadow-md">
+                                Confirm Reject
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card p-12 text-center text-gray-500 border-2 border-dashed border-gray-200">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    <h3 class="text-xl font-bold text-gray-900 mb-1">All Caught Up!</h3>
+    <p>There are no pending payment verifications at this time.</p>
+</div>
+{% endif %}
+
+<script>
+    function openVerificationModal(modalId) {
+        document.getElementById(modalId).classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+    
+    function closeVerificationModal(modalId) {
+        document.getElementById(modalId).classList.add('hidden');
+        document.body.style.overflow = 'auto';
+    }
+    
+    function toggleRejection(paymentId) {
+        document.getElementById('rejection-container-' + paymentId).classList.remove('hidden');
+        document.getElementById('reject-btn-' + paymentId).classList.add('hidden');
+        document.getElementById('confirm-reject-' + paymentId).classList.remove('hidden');
+    }
+</script>
+{% endblock %}

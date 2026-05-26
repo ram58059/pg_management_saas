@@ -1,0 +1,88 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Invoices & Dues | PG Management{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-col md:flex-row md:justify-between md:items-center space-y-4 md:space-y-0">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Invoices & Dues</h1>
+        <p class="text-sm text-gray-500 mt-1">Manage tenant invoices, track pending payments, and generate monthly dues.</p>
+    </div>
+    
+    <div class="flex items-center space-x-3">
+        <!-- Generate Invoices Form -->
+        <form method="post" action="{% url 'generate_monthly_invoices' %}" class="flex items-center space-x-2 bg-white p-1 rounded-lg border shadow-sm">
+            {% csrf_token %}
+            <input type="month" name="billing_month" class="text-sm border-none focus:ring-0 rounded-md py-1" required>
+            <button type="submit" class="bg-gray-900 text-white px-3 py-1.5 rounded-md text-sm font-medium hover:bg-gray-800 transition-colors">
+                Generate Dues
+            </button>
+        </form>
+        
+        <a href="{% url 'electricity_bill_create' %}" class="btn-primary flex items-center space-x-2 text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            <span>Add Electricity Bill</span>
+        </a>
+    </div>
+</div>
+
+<div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tenant</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Month</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Due</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paid</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for invoice in invoices %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-semibold text-gray-900">{{ invoice.tenant.user.get_full_name }}</div>
+                        <div class="text-xs text-gray-500">{{ invoice.tenant.pg_property.name }} - Room {{ invoice.tenant.room.room_number }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">{{ invoice.billing_month|date:"F Y" }}</div>
+                        <div class="text-xs text-gray-500">Due: {{ invoice.due_date|date:"d M Y" }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">₹{{ invoice.total_amount }}</div>
+                        <div class="text-xs text-gray-500">Rent: ₹{{ invoice.rent_amount }} | EB: ₹{{ invoice.electricity_amount }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-green-600">₹{{ invoice.amount_paid }}</div>
+                        <div class="text-xs text-gray-500">Rem: ₹{{ invoice.remaining_due }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if invoice.status == 'PAID' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Paid</span>
+                        {% elif invoice.status == 'PARTIAL' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Partial</span>
+                        {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        {% if invoice.status != 'PAID' %}
+                            <a href="{% url 'payment_create' invoice.id %}" class="text-primary-600 hover:text-primary-900 mr-3">Record Payment</a>
+                        {% endif %}
+                        <a href="{% url 'view_receipt' invoice.id %}" class="text-gray-600 hover:text-gray-900" target="_blank">View Receipt</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-6 py-10 text-center text-gray-500">
+                        <p>No invoices found. Generate dues for the month to get started.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,122 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Shift Tenant | PG Management{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex items-center space-x-2 text-sm text-gray-500 mb-2">
+        <a href="{% url 'tenants_list' %}" class="hover:text-primary-600">Tenants</a>
+        <span>/</span>
+        <span class="text-gray-900 font-medium">Shift Room</span>
+    </div>
+    <h1 class="text-2xl font-bold text-gray-900">Shift Tenant: {{ tenant.user.get_full_name }}</h1>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- Current Details -->
+    <div class="md:col-span-1">
+        <div class="card p-6 bg-gray-50 border-gray-200">
+            <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Current Allocation</h3>
+            <div class="space-y-4">
+                <div>
+                    <p class="text-xs text-gray-500">Property</p>
+                    <p class="font-medium text-gray-900">{{ tenant.pg_property.name }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500">Room</p>
+                    <p class="font-medium text-gray-900">Room {{ tenant.room.room_number }} ({{ tenant.room.capacity }} Sharing)</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500">Base Rent</p>
+                    <p class="font-medium text-gray-900">₹{{ tenant.room.base_rent }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Shift Form -->
+    <div class="md:col-span-2">
+        <div class="card p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4 border-b pb-2">New Allocation</h3>
+            
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                
+                <div>
+                    <label for="property" class="block text-sm font-medium text-gray-700 mb-1">Select Property</label>
+                    <select id="property_select" name="property" class="input-field">
+                        <option value="">---------</option>
+                        {% for prop in properties %}
+                        <option value="{{ prop.id }}" {% if prop.id == tenant.pg_property.id %}selected{% endif %}>{{ prop.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="room" class="block text-sm font-medium text-gray-700 mb-1">Select Available Room</label>
+                    <select id="room_select" name="room" class="input-field" required>
+                        <option value="">Select a property first...</option>
+                    </select>
+                </div>
+                
+                <div class="pt-4 flex justify-end space-x-3">
+                    <a href="{% url 'tenants_list' %}" class="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn-primary">
+                        Confirm Shift
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const propertySelect = document.getElementById('property_select');
+        const roomSelect = document.getElementById('room_select');
+        
+        function loadRooms(propertyId, currentRoomId) {
+            roomSelect.innerHTML = '<option value="">Loading...</option>';
+            
+            if (propertyId) {
+                fetch(`{% url 'ajax_load_rooms' %}?property_id=${propertyId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        roomSelect.innerHTML = '<option value="">---------</option>';
+                        if (data.length === 0) {
+                            roomSelect.innerHTML = '<option value="">No available rooms in this property</option>';
+                        } else {
+                            data.forEach(room => {
+                                // Exclude the current room
+                                if (room.id.toString() !== currentRoomId.toString()) {
+                                    const option = document.createElement('option');
+                                    option.value = room.id;
+                                    option.textContent = room.name;
+                                    roomSelect.appendChild(option);
+                                }
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        roomSelect.innerHTML = '<option value="">Error loading rooms</option>';
+                    });
+            } else {
+                roomSelect.innerHTML = '<option value="">Select a property first...</option>';
+            }
+        }
+        
+        // Initial load if a property is already selected
+        if (propertySelect.value) {
+            loadRooms(propertySelect.value, '{{ tenant.room.id }}');
+        }
+        
+        // Load on change
+        propertySelect.addEventListener('change', function() {
+            loadRooms(this.value, '{{ tenant.room.id }}');
+        });
+    });
+</script>
+{% endblock %}
