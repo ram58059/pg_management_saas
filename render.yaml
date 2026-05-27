@@ -1,0 +1,22 @@
+databases:
+  - name: stayi-pg-management
+    plan: free
+    databaseName: stayi_pg_management
+    user: stayi_pg_management_user
+
+services:
+  - type: web
+    plan: free
+    name: pg_management_saas
+    runtime: python
+    buildCommand: './build.sh'
+    startCommand: 'python -m gunicorn pg_management_saas.asgi:application -k uvicorn.workers.UvicornWorker'
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stayi-pg-management
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: WEB_CONCURRENCY
+        value: 4
