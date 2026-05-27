@@ -12,6 +12,7 @@ class Property(models.Model):
     name = models.CharField(max_length=200)
     address = models.TextField()
     pg_type = models.CharField(max_length=10, choices=GENDER_CHOICES)
+    electricity_cost_per_unit = models.DecimalField(max_digits=6, decimal_places=2, default=0, help_text="Cost per unit in ₹")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

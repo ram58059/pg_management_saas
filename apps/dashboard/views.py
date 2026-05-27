@@ -5,6 +5,7 @@ from apps.properties.models import Property, Room
 from apps.tenants.models import Tenant
 from apps.payments.models import Invoice, Payment
 import datetime
+from django.apps import apps
 
 @login_required
 def owner_dashboard(request):
@@ -58,14 +59,22 @@ def tenant_dashboard(request):
     tenant = request.user.tenant_profile
     invoices = Invoice.objects.filter(tenant=tenant).order_by('-billing_month')
     
-    # Calculate active due
+    # Calculate active due from invoices
     active_due = sum(inv.remaining_due for inv in invoices if inv.status != 'PAID')
+    
+    # Calculate active due from ad-hoc TenantDues
+    tenant_dues = apps.get_model('tenants', 'TenantDue').objects.filter(tenant=tenant).order_by('-due_date')
+    pending_tenant_dues = tenant_dues.filter(status__in=['PENDING', 'PARTIAL']).aggregate(Sum('amount'))['amount__sum'] or 0
+    active_due += pending_tenant_dues
     
     context = {
         'tenant': tenant,
         'room': tenant.room,
         'property': tenant.pg_property,
         'invoices': invoices,
-        'active_due': active_due
+        'active_due': active_due,
+        'tenant_dues': tenant_dues,
+        'pending_tenant_dues_total': pending_tenant_dues,
+        'pending_tenant_dues_count': tenant_dues.filter(status__in=['PENDING', 'PARTIAL']).count(),
     }
     return render(request, 'tenant/dashboard.html', context)

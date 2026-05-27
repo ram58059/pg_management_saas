@@ -1,6 +1,8 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 from apps.accounts.models import CustomUser, PGOwner
 from apps.properties.models import Property, Room
+from utils.file_uploads import get_tenant_document_upload_path, get_tenant_photo_upload_path
 
 class Tenant(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='tenant_profile')
@@ -17,11 +19,51 @@ class Tenant(models.Model):
     deposit_amount = models.DecimalField(max_digits=10, decimal_places=2)
     is_active = models.BooleanField(default=True)
     
+    profile_photo = models.ImageField(upload_to=get_tenant_photo_upload_path, blank=True, null=True)
+    
+    def clean(self):
+        super().clean()
+        if self.pk:
+            old_tenant = Tenant.objects.get(pk=self.pk)
+            # If the old tenant had a photo, and it's being changed or deleted, raise an error
+            if old_tenant.profile_photo and self.profile_photo != old_tenant.profile_photo:
+                raise ValidationError({'profile_photo': 'Tenant photo is permanently locked after upload.'})
+                
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+    
     def __str__(self):
         return f"{self.user.get_full_name()} - {self.room}"
+
+class TenantDue(models.Model):
+    REASON_CHOICES = (
+        ('RENT', 'Monthly Rent'),
+        ('ELECTRICITY', 'Electricity Bill'),
+        ('DEPOSIT', 'Security Deposit'),
+        ('MAINTENANCE', 'Maintenance Charges'),
+        ('DAMAGE', 'Damage Charges'),
+        ('LATE_FEE', 'Late Payment'),
+        ('FOOD', 'Food Charges'),
+        ('OTHER', 'Other'),
+    )
+    STATUS_CHOICES = (
+        ('PENDING', 'Pending'),
+        ('PARTIAL', 'Partial'),
+        ('CLEARED', 'Cleared'),
+    )
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='dues')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    reason = models.CharField(max_length=20, choices=REASON_CHOICES)
+    custom_reason = models.CharField(max_length=100, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    due_date = models.DateField()
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='PENDING')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 class TenantDocument(models.Model):
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='documents')
     document_type = models.CharField(max_length=50)
-    file = models.FileField(upload_to='tenant_docs/')
+    file = models.FileField(upload_to=get_tenant_document_upload_path)
     uploaded_at = models.DateTimeField(auto_now_add=True)

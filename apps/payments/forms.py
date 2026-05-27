@@ -1,5 +1,5 @@
 from django import forms
-from .models import Payment, Invoice, ElectricityBill, PaymentProof, PropertyPaymentSettings
+from .models import Payment, Invoice, PaymentProof, PropertyPaymentSettings
 from apps.properties.models import Property
 
 class PaymentForm(forms.ModelForm):
@@ -24,23 +24,38 @@ class InvoiceForm(forms.ModelForm):
             'due_date': forms.DateInput(attrs={'type': 'date', 'class': 'input-field mt-1 block w-full'}),
         }
 
-class ElectricityBillForm(forms.ModelForm):
-    class Meta:
-        model = ElectricityBill
-        fields = ['billing_month', 'total_bill_amount']
-        widgets = {
-            'billing_month': forms.DateInput(attrs={'class': 'input-field mt-1 block w-full', 'type': 'date'}),
-            'total_bill_amount': forms.NumberInput(attrs={'class': 'input-field mt-1 block w-full', 'step': '0.01'}),
-        }
+
 
 class PaymentProofForm(forms.ModelForm):
     class Meta:
         model = PaymentProof
         fields = ['screenshot', 'utr_number']
         widgets = {
-            'screenshot': forms.FileInput(attrs={'class': 'input-field mt-1 block w-full', 'accept': 'image/*'}),
+            'screenshot': forms.FileInput(attrs={'class': 'input-field mt-1 block w-full', 'accept': 'image/jpeg,image/png,image/webp'}),
             'utr_number': forms.TextInput(attrs={'class': 'input-field mt-1 block w-full', 'placeholder': 'e.g., 123456789012'}),
         }
+
+    def clean_screenshot(self):
+        screenshot = self.cleaned_data.get('screenshot')
+        if not screenshot:
+            return screenshot
+            
+        # Validate file size (max 5MB)
+        max_size = 5 * 1024 * 1024
+        if screenshot.size > max_size:
+            raise forms.ValidationError("File size must be under 5MB.")
+            
+        # Validate file type
+        valid_extensions = ['.jpg', '.jpeg', '.png', '.webp']
+        import os
+        ext = os.path.splitext(screenshot.name)[1].lower()
+        if ext not in valid_extensions:
+            raise forms.ValidationError("Unsupported file extension. Allowed extensions are: jpg, jpeg, png, webp.")
+            
+        # You could also use python-magic or django's built-in tools to validate mimetype
+        # if more robust security is needed against spoofed extensions.
+        
+        return screenshot
 
 class PropertyPaymentSettingsForm(forms.ModelForm):
     class Meta:

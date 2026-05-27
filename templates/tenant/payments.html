@@ -1,65 +1,81 @@
 {% extends 'layouts/base.html' %}
 
-{% block title %}Invoices & Rent - PG Management{% endblock %}
+{% block title %}My Invoices - PG Management{% endblock %}
 
 {% block content %}
 <div class="mb-8 flex justify-between items-end">
     <div>
-        <h1 class="text-3xl font-black text-gray-900 tracking-tight">Rent & Invoices</h1>
-        <p class="text-gray-500 font-medium mt-1">Manage your monthly rent payments</p>
+        <h1 class="text-3xl font-black text-gray-900 tracking-tight">My Invoices</h1>
+        <p class="text-gray-500 font-medium mt-1">Download and manage your payment receipts</p>
     </div>
     <a href="{% url 'tenant_payment_history' %}" class="btn-primary bg-white text-gray-700 border border-gray-200 hover:bg-gray-50">
-        View History
+        Payment History
     </a>
 </div>
 
 <div class="space-y-6">
     {% for invoice in invoices %}
-    <div class="card p-6 border-l-4 {% if invoice.status == 'PAID' %}border-l-emerald-500{% elif invoice.status == 'PARTIAL' %}border-l-yellow-500{% else %}border-l-red-500{% endif %}">
+    <div class="card p-6 border-l-4 {% if invoice.status == 'PAID' %}border-l-emerald-500{% elif invoice.status == 'PENDING' %}border-l-yellow-500{% else %}border-l-red-500{% endif %} hover:shadow-md transition-shadow">
         <div class="flex flex-col md:flex-row justify-between md:items-center gap-4">
             <div>
-                <h3 class="text-xl font-bold text-gray-900">{{ invoice.billing_month|date:"F Y" }}</h3>
-                <div class="text-sm text-gray-500 font-medium mt-1">Due Date: {{ invoice.due_date|date:"d M Y" }}</div>
-                
-                <div class="mt-3 flex space-x-4 text-sm">
-                    <div><span class="text-gray-500">Rent:</span> <span class="font-semibold">₹{{ invoice.rent_amount }}</span></div>
-                    {% if invoice.electricity_amount > 0 %}
-                    <div><span class="text-gray-500">Electricity:</span> <span class="font-semibold">₹{{ invoice.electricity_amount }}</span></div>
+                <div class="flex items-center space-x-3 mb-2">
+                    <h3 class="text-xl font-bold text-gray-900">{{ invoice.invoice_number }}</h3>
+                    {% if invoice.status == 'PAID' %}
+                    <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">Paid</span>
+                    {% elif invoice.status == 'PENDING' %}
+                    <span class="bg-yellow-100 text-yellow-800 text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">Pending</span>
+                    {% else %}
+                    <span class="bg-red-100 text-red-800 text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">Failed</span>
                     {% endif %}
+                </div>
+                
+                <div class="text-sm text-gray-500 font-medium space-y-1">
+                    <div><span class="text-gray-400">Type:</span> {{ invoice.get_invoice_type_display }}</div>
+                    <div><span class="text-gray-400">Billing Month:</span> {{ invoice.invoice_month|date:"F Y" }}</div>
+                    <div><span class="text-gray-400">Generated On:</span> {{ invoice.generated_at|date:"d M Y" }}</div>
                 </div>
             </div>
             
             <div class="flex flex-col md:items-end">
-                <div class="text-3xl font-black text-gray-900 mb-1">₹{{ invoice.total_amount }}</div>
-                
-                <div class="mb-3">
-                    {% if invoice.status == 'PAID' %}
-                    <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Paid</span>
-                    {% elif invoice.status == 'PARTIAL' %}
-                    <span class="bg-yellow-100 text-yellow-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Partially Paid (₹{{ invoice.remaining_due }} left)</span>
-                    {% else %}
-                    <span class="bg-red-100 text-red-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Pending</span>
-                    {% endif %}
-                </div>
+                <div class="text-3xl font-black text-gray-900 mb-4">₹{{ invoice.amount }}</div>
                 
                 <div class="flex space-x-2 w-full md:w-auto">
-                    <a href="{% url 'view_receipt' invoice.id %}" class="flex-1 md:flex-none px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm text-center">
-                        Details
+                    {% if invoice.pdf_file %}
+                    <a href="{% url 'download_invoice' invoice.id %}" onclick="showToast('Downloading invoice...', 'success')" class="flex items-center justify-center space-x-2 flex-1 md:flex-none px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-bold shadow-md text-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                        </svg>
+                        <span>Download PDF</span>
                     </a>
-                    
-                    {% if invoice.status != 'PAID' %}
-                    <a href="{% url 'tenant_pay_rent' invoice.id %}" class="flex-1 md:flex-none px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-bold shadow-md text-center">
-                        Pay Now
-                    </a>
+                    {% else %}
+                    <button disabled class="flex items-center justify-center space-x-2 flex-1 md:flex-none px-6 py-2.5 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed font-bold text-center">
+                        <span>No PDF</span>
+                    </button>
                     {% endif %}
                 </div>
             </div>
         </div>
     </div>
     {% empty %}
-    <div class="card p-12 text-center text-gray-500">
-        No invoices found.
+    <div class="card p-12 text-center">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <h3 class="mt-2 text-sm font-semibold text-gray-900">No invoices available yet.</h3>
+        <p class="mt-1 text-sm text-gray-500">Invoices will appear here once your payments are approved.</p>
     </div>
     {% endfor %}
 </div>
+
+<script>
+    function showToast(message, type = 'success') {
+        // Implementation depends on existing toast system
+        // Typically something like:
+        if (typeof window.showNotification === 'function') {
+            window.showNotification(message, type);
+        } else {
+            console.log(message);
+        }
+    }
+</script>
 {% endblock %}

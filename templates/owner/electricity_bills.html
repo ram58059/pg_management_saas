@@ -1,0 +1,266 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Electricity Bills Manager | PG Management{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Electricity Bills Manager</h1>
+        <p class="text-sm text-gray-500 mt-1">Calculate and generate EB dues for each room automatically.</p>
+    </div>
+</div>
+
+<div class="card p-6 mb-8">
+    <form method="get" class="flex flex-col md:flex-row gap-4 items-end" id="filterForm">
+        <div class="flex-1 w-full">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Select Property</label>
+            <select name="property" class="input-field w-full" onchange="document.getElementById('filterForm').submit()">
+                <option value="">-- Choose a property --</option>
+                {% for property in properties %}
+                <option value="{{ property.id }}" {% if selected_property_id == property.id %}selected{% endif %}>
+                    {{ property.name }} (₹{{ property.electricity_cost_per_unit }}/unit)
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="flex-1 w-full">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Billing Month</label>
+            <input type="month" name="month" value="{{ billing_month }}" class="input-field w-full" onchange="document.getElementById('filterForm').submit()">
+        </div>
+        
+        <div class="w-full md:w-auto mt-4 md:mt-0">
+            <a href="{% url 'electricity_bills_manager' %}" class="btn border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 text-center block md:inline-block w-full md:w-auto px-4 py-2 rounded-md">Clear Filters</a>
+        </div>
+    </form>
+</div>
+
+{% if selected_property_id %}
+    {% if not rooms_data %}
+        <div class="bg-white rounded-lg border border-gray-200 p-12 text-center">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No rooms found</h3>
+            <p class="mt-1 text-sm text-gray-500">This property doesn't have any active rooms yet.</p>
+        </div>
+    {% else %}
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Room</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Previous Reading</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Current Reading</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Calculation</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for item in rooms_data %}
+                            <tr id="row-{{ item.room.id }}" class="{% if item.is_generated %}bg-green-50{% endif %}">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="font-medium text-gray-900">Room {{ item.room.room_number }}</div>
+                                    <div class="text-xs text-gray-500">{{ item.occupied_count }} Active Tenant{{ item.occupied_count|pluralize }}</div>
+                                </td>
+                                
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <input type="number" step="0.01" min="0" 
+                                           id="prev-{{ item.room.id }}" 
+                                           value="{{ item.previous_reading }}"
+                                           {% if item.is_generated or item.occupied_count == 0 %}disabled{% endif %}
+                                           class="input-field w-24 px-2 py-1 text-sm"
+                                           oninput="calculateEB({{ item.room.id }}, {{ item.cost_per_unit|default:'0' }}, {{ item.occupied_count }})">
+                                </td>
+                                
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <input type="number" step="0.01" min="0" 
+                                           id="curr-{{ item.room.id }}" 
+                                           {% if item.is_generated or item.occupied_count == 0 %}disabled{% endif %}
+                                           class="input-field w-24 px-2 py-1 text-sm"
+                                           oninput="calculateEB({{ item.room.id }}, {{ item.cost_per_unit|default:'0' }}, {{ item.occupied_count }})">
+                                </td>
+                                
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {% if item.is_generated %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            Bill Generated
+                                        </span>
+                                    {% elif item.occupied_count == 0 %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                            Vacant
+                                        </span>
+                                    {% else %}
+                                        <div id="calc-{{ item.room.id }}" class="text-sm text-gray-500">
+                                            <div class="font-medium text-gray-900">Units: <span id="units-{{ item.room.id }}">0</span></div>
+                                            <div>Total: ₹<span id="total-{{ item.room.id }}">0</span></div>
+                                            <div class="text-primary-600 font-medium">Split: ₹<span id="split-{{ item.room.id }}">0</span>/person</div>
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    {% if item.is_generated %}
+                                        <button disabled class="text-gray-400 cursor-not-allowed">
+                                            Generated
+                                        </button>
+                                    {% elif item.occupied_count == 0 %}
+                                        <button disabled class="text-gray-400 cursor-not-allowed">
+                                            N/A
+                                        </button>
+                                    {% else %}
+                                        <button type="button" 
+                                                id="btn-{{ item.room.id }}"
+                                                onclick="submitEB({{ item.room.id }})"
+                                                class="text-white bg-primary-600 hover:bg-primary-700 px-3 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                disabled>
+                                            Generate
+                                        </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+{% else %}
+    <div class="bg-white rounded-lg border border-gray-200 p-12 text-center">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">Select a Property</h3>
+        <p class="mt-1 text-sm text-gray-500">Choose a property from the dropdown above to manage electricity bills.</p>
+    </div>
+{% endif %}
+<div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function calculateEB(roomId, costPerUnit, occupiedCount) {
+        if (occupiedCount === 0) return;
+        
+        const prevInput = document.getElementById(`prev-${roomId}`);
+        const currInput = document.getElementById(`curr-${roomId}`);
+        const btn = document.getElementById(`btn-${roomId}`);
+        
+        const prev = parseFloat(prevInput.value) || 0;
+        const curr = parseFloat(currInput.value) || 0;
+        
+        const unitsEl = document.getElementById(`units-${roomId}`);
+        const totalEl = document.getElementById(`total-${roomId}`);
+        const splitEl = document.getElementById(`split-${roomId}`);
+        
+        if (currInput.value === '' || curr < prev) {
+            unitsEl.innerText = '0';
+            totalEl.innerText = '0';
+            splitEl.innerText = '0';
+            btn.disabled = true;
+            return;
+        }
+        
+        const units = curr - prev;
+        const total = units * costPerUnit;
+        const split = total / occupiedCount;
+        
+        unitsEl.innerText = units.toFixed(2);
+        totalEl.innerText = total.toFixed(2);
+        splitEl.innerText = split.toFixed(2);
+        btn.disabled = false;
+    }
+    
+    async function submitEB(roomId) {
+        const prev = document.getElementById(`prev-${roomId}`).value;
+        const curr = document.getElementById(`curr-${roomId}`).value;
+        const btn = document.getElementById(`btn-${roomId}`);
+        const row = document.getElementById(`row-${roomId}`);
+        
+        if (!curr || parseFloat(curr) < parseFloat(prev)) {
+            showToast("Invalid current reading.", "error");
+            return;
+        }
+        
+        btn.disabled = true;
+        btn.innerText = "Processing...";
+        
+        try {
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    room_id: roomId,
+                    previous_reading: prev,
+                    current_reading: curr
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                showToast(data.message, "success");
+                
+                // Update UI state
+                row.classList.add('bg-green-50');
+                document.getElementById(`prev-${roomId}`).disabled = true;
+                document.getElementById(`curr-${roomId}`).disabled = true;
+                
+                const calcDiv = document.getElementById(`calc-${roomId}`);
+                calcDiv.innerHTML = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Bill Generated</span>`;
+                
+                btn.parentElement.innerHTML = `<button disabled class="text-gray-400 cursor-not-allowed">Generated</button>`;
+            } else {
+                showToast(data.error || "An error occurred", "error");
+                btn.disabled = false;
+                btn.innerText = "Generate";
+            }
+        } catch (error) {
+            console.error(error);
+            showToast("Network error occurred", "error");
+            btn.disabled = false;
+            btn.innerText = "Generate";
+        }
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = `p-4 rounded-xl shadow-lg text-white font-semibold transform transition-all duration-300 translate-y-10 opacity-0 ${type === 'success' ? 'bg-emerald-600' : 'bg-red-600'}`;
+        toast.innerText = message;
+        
+        container.appendChild(toast);
+        
+        // Animate in
+        setTimeout(() => {
+            toast.classList.remove('translate-y-10', 'opacity-0');
+        }, 10);
+        
+        // Remove after 3s
+        setTimeout(() => {
+            toast.classList.add('translate-y-10', 'opacity-0');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+</script>
+{% endblock %}

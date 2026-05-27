@@ -41,7 +41,7 @@
                         {% endif %}
                     </td>
                     <td class="p-4">
-                        {% if payment.status == 'APPROVED' %}
+                        {% if payment.status == 'SUCCESS' %}
                             <span class="inline-flex items-center bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-1 rounded-full uppercase">
                                 <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
                                 Approved
@@ -51,7 +51,7 @@
                                 <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>
                                 Rejected
                             </span>
-                        {% elif payment.status == 'SCREENSHOT_UPLOADED' %}
+                        {% elif payment.status == 'IN_VERIFICATION' %}
                             <span class="inline-flex items-center bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-full uppercase">
                                 <svg class="w-3 h-3 mr-1 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                                 Under Review
@@ -65,9 +65,11 @@
                     </td>
                     <td class="p-4 text-right">
                         {% if payment.status == 'PENDING' or payment.status == 'REJECTED' %}
-                        <a href="{% url 'tenant_upload_proof' payment.id %}" class="text-indigo-600 hover:text-indigo-900 font-semibold text-sm">Upload Proof</a>
-                        {% elif payment.status == 'APPROVED' %}
+                        <a href="{% url 'tenant_payment_page' payment.id %}" class="text-indigo-600 hover:text-indigo-900 font-semibold text-sm">Upload Proof</a>
+                        {% elif payment.status == 'SUCCESS' and payment.invoice %}
                         <a href="{% url 'view_receipt' payment.invoice.id %}" class="text-gray-600 hover:text-gray-900 font-semibold text-sm">Receipt</a>
+                        {% elif payment.status == 'SUCCESS' %}
+                        <span class="text-emerald-600 text-sm font-semibold">Cleared</span>
                         {% else %}
                         <span class="text-gray-400 text-sm italic">Verifying...</span>
                         {% endif %}

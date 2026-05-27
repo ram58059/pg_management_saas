@@ -9,7 +9,7 @@
         <p class="text-gray-500 font-medium mt-1">{{ property.name }} - Room {{ room.room_number }}</p>
     </div>
     
-    <a href="{% url 'tenant_payments' %}" class="btn-primary flex items-center shadow-md">
+    <a href="{% url 'tenant_payment_intent' %}" class="btn-primary flex items-center shadow-md">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
@@ -17,7 +17,53 @@
     </a>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+{% if request.user.tenant_profile.payments.all %}
+    {% for payment in request.user.tenant_profile.payments.all %}
+        {% if payment.status == 'IN_VERIFICATION' %}
+        <div class="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded-md shadow-sm">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-blue-700 font-medium">
+                        You have a payment of ₹{{ payment.amount }} pending verification by the owner. <a href="{% url 'tenant_payment_history' %}" class="underline hover:text-blue-900">View History</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% elif payment.status == 'REJECTED' %}
+        <div class="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-md shadow-sm">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="flex items-start sm:items-center">
+                    <div class="flex-shrink-0 mt-0.5 sm:mt-0">
+                        <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-red-700 font-medium">
+                            Your payment of ₹{{ payment.amount }} was rejected by the owner.
+                        </p>
+                        {% if payment.proof.rejection_reason %}
+                        <p class="text-xs text-red-600 mt-1">Reason: {{ payment.proof.rejection_reason }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="ml-8 sm:ml-0">
+                    <a href="{% url 'tenant_payment_page' payment.id %}" class="inline-block bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow transition">
+                        Re-upload Proof
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    {% endfor %}
+{% endif %}
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
     <div class="card p-6 border-l-4 border-l-blue-500">
         <div class="text-gray-500 text-sm font-semibold uppercase tracking-wider mb-1">Your Details</div>
         <div class="space-y-3 mt-4">
@@ -42,7 +88,7 @@
         
         {% if active_due > 0 %}
         <div class="mt-6">
-            <a href="{% url 'tenant_payments' %}" class="w-full btn-primary bg-red-600 hover:bg-red-700 block text-center font-semibold text-lg py-3 rounded-xl shadow">
+            <a href="{% url 'tenant_payment_intent' %}" class="w-full btn-primary bg-red-600 hover:bg-red-700 block text-center font-semibold text-lg py-3 rounded-xl shadow">
                 Clear Dues Now
             </a>
         </div>
@@ -54,6 +100,66 @@
             All dues cleared!
         </div>
         {% endif %}
+    </div>
+
+    <div class="card p-6 border-l-4 border-l-amber-500">
+        <div class="text-gray-500 text-sm font-semibold uppercase tracking-wider mb-1">Ad-hoc Pending Dues</div>
+        <div class="text-3xl font-black text-gray-900 mt-2 text-amber-600">₹{{ pending_tenant_dues_total }}</div>
+        <div class="mt-4 text-sm text-gray-600 font-medium">
+            <span class="font-bold text-gray-900">{{ pending_tenant_dues_count }}</span> Pending Due(s)
+        </div>
+    </div>
+</div>
+
+<div class="mt-8 card overflow-hidden">
+    <div class="px-6 py-5 border-b border-gray-100 bg-gray-50">
+        <h3 class="text-lg font-bold text-gray-900">Your Dues List</h3>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for due in tenant_dues %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {% if due.reason == 'OTHER' %}
+                            {{ due.custom_reason }}
+                        {% else %}
+                            {{ due.get_reason_display }}
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">₹{{ due.amount }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ due.due_date|date:"M d, Y" }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if due.status == 'PENDING' %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Pending</span>
+                        {% elif due.status == 'PARTIAL' %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Partial</span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Cleared</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title="{{ due.description }}">
+                        {{ due.description|default:"-" }}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="px-6 py-10 text-center text-gray-500">
+                        <p>No dues recorded.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 {% endblock %}

@@ -3,37 +3,70 @@
 {% block title %}Verify Payments - PG Management{% endblock %}
 
 {% block content %}
-<div class="mb-8">
-    <h1 class="text-3xl font-black text-gray-900 tracking-tight">Payment Verifications</h1>
-    <p class="text-gray-500 font-medium mt-1">Review and approve tenant rent payments</p>
+<div class="mb-8 flex justify-between items-end">
+    <div>
+        <h1 class="text-3xl font-black text-gray-900 tracking-tight">Payment Verifications</h1>
+        <p class="text-gray-500 font-medium mt-1">Review and approve tenant rent payments</p>
+    </div>
 </div>
 
 <div class="card p-6 mb-8 border-t-4 border-t-indigo-500">
-    <form method="GET" class="flex items-end space-x-4">
-        <div class="flex-grow">
-            <label class="block text-sm font-semibold text-gray-700 mb-1">Filter by Property</label>
-            <select name="property" class="input-field mt-1 block w-full" onchange="this.form.submit()">
-                <option value="">-- All Properties --</option>
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Search Tenant</label>
+            <input type="text" name="q" value="{{ search_query }}" placeholder="Name..." class="input-field block w-full text-sm">
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Property</label>
+            <select name="property" class="input-field block w-full text-sm">
+                <option value="">All Properties</option>
                 {% for prop in properties %}
                 <option value="{{ prop.id }}" {% if prop.id == selected_property_id %}selected{% endif %}>{{ prop.name }}</option>
                 {% endfor %}
             </select>
         </div>
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Status</label>
+            <select name="status" class="input-field block w-full text-sm">
+                <option value="" {% if not status_filter %}selected{% endif %}>All</option>
+                <option value="IN_VERIFICATION" {% if status_filter == 'IN_VERIFICATION' %}selected{% endif %}>In Verification</option>
+                <option value="SUCCESS" {% if status_filter == 'SUCCESS' %}selected{% endif %}>Approved</option>
+                <option value="REJECTED" {% if status_filter == 'REJECTED' %}selected{% endif %}>Rejected</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Month</label>
+            <input type="month" name="month" value="{{ month_filter }}" class="input-field block w-full text-sm">
+        </div>
+        <div class="flex items-end space-x-2">
+            <div class="flex-grow">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Specific Date</label>
+                <input type="date" name="date" value="{{ date_filter }}" class="input-field block w-full text-sm">
+            </div>
+            <button type="submit" class="btn-primary bg-indigo-600 hover:bg-indigo-700 py-2.5 px-4 h-full">Filter</button>
+        </div>
     </form>
 </div>
 
-{% if payments %}
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    {% for payment in payments %}
-    <div class="card p-5 border border-indigo-100 hover:border-indigo-300 transition-colors">
+<!-- Toast Container -->
+<div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2"></div>
+
+{% if page_obj %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8" id="payments-grid">
+    {% for payment in page_obj %}
+    <div class="card p-5 border border-indigo-100 hover:border-indigo-300 transition-colors" id="payment-card-{{ payment.id }}">
         <div class="flex justify-between items-start mb-4">
             <div>
-                <h3 class="font-bold text-gray-900 text-lg">{{ payment.invoice.tenant.user.get_full_name }}</h3>
-                <p class="text-sm text-gray-500">{{ payment.invoice.tenant.pg_property.name }} - Room {{ payment.invoice.tenant.room.room_number }}</p>
+                <h3 class="font-bold text-gray-900 text-lg">{{ payment.current_tenant.user.get_full_name }}</h3>
+                <p class="text-sm text-gray-500">{{ payment.current_tenant.pg_property.name }} - Room {{ payment.current_tenant.room.room_number }}</p>
             </div>
-            <div class="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold">
-                {{ payment.invoice.billing_month|date:"M Y" }}
-            </div>
+            {% if payment.status == 'IN_VERIFICATION' %}
+                <div class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-bold">Pending</div>
+            {% elif payment.status == 'SUCCESS' %}
+                <div class="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-bold">Approved</div>
+            {% elif payment.status == 'REJECTED' %}
+                <div class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-bold">Rejected</div>
+            {% endif %}
         </div>
         
         <div class="space-y-2 mb-4 text-sm bg-gray-50 p-3 rounded-lg border border-gray-100">
@@ -42,8 +75,12 @@
                 <span class="font-bold text-gray-900">₹{{ payment.amount }}</span>
             </div>
             <div class="flex justify-between">
-                <span class="text-gray-500">UTR No:</span>
-                <span class="font-mono font-medium text-gray-800">{{ payment.proof.utr_number }}</span>
+                <span class="text-gray-500">For:</span>
+                <span class="font-medium text-gray-800 text-right">
+                    {% if payment.invoice %}Rent ({{ payment.invoice.billing_month|date:"M Y" }})
+                    {% elif payment.tenant_due %}{{ payment.tenant_due.get_reason_display }}
+                    {% else %}Active Dues{% endif %}
+                </span>
             </div>
             <div class="flex justify-between">
                 <span class="text-gray-500">Uploaded:</span>
@@ -88,21 +125,27 @@
                     <div class="bg-indigo-50 p-4 rounded-lg">
                         <div class="text-sm text-indigo-700 font-semibold uppercase mb-1">Payment Details</div>
                         <div class="text-2xl font-black text-indigo-900 mb-2">₹{{ payment.amount }}</div>
-                        <div class="font-medium text-indigo-800">{{ payment.invoice.tenant.user.get_full_name }}</div>
-                        <div class="text-sm text-indigo-600">{{ payment.invoice.tenant.pg_property.name }}, Room {{ payment.invoice.tenant.room.room_number }}</div>
-                        <div class="text-sm text-indigo-600 mt-2 border-t border-indigo-200 pt-2">For: {{ payment.invoice.billing_month|date:"F Y" }} Rent</div>
+                        <div class="font-medium text-indigo-800">{{ payment.current_tenant.user.get_full_name }}</div>
+                        <div class="text-sm text-indigo-600">{{ payment.current_tenant.pg_property.name }}, Room {{ payment.current_tenant.room.room_number }}</div>
+                        <div class="text-sm text-indigo-600 mt-2 border-t border-indigo-200 pt-2">
+                            {% if payment.invoice %}For: {{ payment.invoice.billing_month|date:"F Y" }} Rent
+                            {% elif payment.tenant_due %}For: {{ payment.tenant_due.get_reason_display }}
+                            {% else %}For: Active Dues{% endif %}
+                        </div>
                     </div>
                     
-                    <form action="{% url 'verify_payment' payment.id %}" method="POST" class="mt-auto space-y-3">
+                    {% if payment.status == 'IN_VERIFICATION' %}
+                    <form onsubmit="handleVerification(event, '{{ payment.id }}')" class="mt-auto space-y-3">
                         {% csrf_token %}
+                        <input type="hidden" name="action" id="action-{{ payment.id }}" value="">
                         
                         <div id="rejection-container-{{ payment.id }}" class="hidden mb-3">
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Reason for Rejection</label>
-                            <textarea name="rejection_reason" class="input-field w-full text-sm" rows="2" placeholder="Tell the tenant why this was rejected..."></textarea>
+                            <textarea id="reason-{{ payment.id }}" name="rejection_reason" class="input-field w-full text-sm" rows="2" placeholder="Tell the tenant why this was rejected..."></textarea>
                         </div>
                         
                         <div class="flex space-x-3">
-                            <button type="submit" name="action" value="APPROVE" class="flex-1 bg-emerald-600 text-white py-3 rounded-lg font-bold hover:bg-emerald-700 transition shadow-md hover:shadow-lg flex justify-center items-center">
+                            <button type="button" onclick="submitVerification('{{ payment.id }}', 'APPROVE')" id="approve-btn-{{ payment.id }}" class="flex-1 bg-emerald-600 text-white py-3 rounded-lg font-bold hover:bg-emerald-700 transition shadow-md hover:shadow-lg flex justify-center items-center">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                 </svg>
@@ -111,24 +154,52 @@
                             <button type="button" onclick="toggleRejection('{{ payment.id }}')" id="reject-btn-{{ payment.id }}" class="flex-1 bg-red-100 text-red-700 py-3 rounded-lg font-bold hover:bg-red-200 transition border border-red-200">
                                 Reject...
                             </button>
-                            <button type="submit" name="action" value="REJECT" id="confirm-reject-{{ payment.id }}" class="hidden flex-1 bg-red-600 text-white py-3 rounded-lg font-bold hover:bg-red-700 transition shadow-md">
+                            <button type="button" onclick="submitVerification('{{ payment.id }}', 'REJECT')" id="confirm-reject-{{ payment.id }}" class="hidden flex-1 bg-red-600 text-white py-3 rounded-lg font-bold hover:bg-red-700 transition shadow-md">
                                 Confirm Reject
                             </button>
                         </div>
                     </form>
+                    {% else %}
+                    <div class="mt-auto p-4 rounded-lg text-center {% if payment.status == 'SUCCESS' %}bg-emerald-50 text-emerald-800 border border-emerald-200{% else %}bg-red-50 text-red-800 border border-red-200{% endif %}">
+                        <div class="font-bold mb-1">Payment {% if payment.status == 'SUCCESS' %}Approved{% else %}Rejected{% endif %}</div>
+                        {% if payment.status == 'REJECTED' %}
+                        <div class="text-sm">Reason: {{ payment.proof.rejection_reason }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
     {% endfor %}
 </div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<div class="flex justify-center mt-8">
+    <nav class="inline-flex rounded-md shadow-sm">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}&q={{ search_query }}&property={{ selected_property_id|default:'' }}&status={{ status_filter }}&month={{ month_filter }}&date={{ date_filter }}" class="px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-l-md">Previous</a>
+        {% endif %}
+        
+        <span class="px-4 py-2 border-t border-b border-gray-300 bg-white text-sm font-medium text-gray-700">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+        </span>
+        
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}&q={{ search_query }}&property={{ selected_property_id|default:'' }}&status={{ status_filter }}&month={{ month_filter }}&date={{ date_filter }}" class="px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-r-md">Next</a>
+        {% endif %}
+    </nav>
+</div>
+{% endif %}
+
 {% else %}
 <div class="card p-12 text-center text-gray-500 border-2 border-dashed border-gray-200">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
-    <h3 class="text-xl font-bold text-gray-900 mb-1">All Caught Up!</h3>
-    <p>There are no pending payment verifications at this time.</p>
+    <h3 class="text-xl font-bold text-gray-900 mb-1">No Payments Found!</h3>
+    <p>Try adjusting your filters or check back later.</p>
 </div>
 {% endif %}
 
@@ -147,6 +218,109 @@
         document.getElementById('rejection-container-' + paymentId).classList.remove('hidden');
         document.getElementById('reject-btn-' + paymentId).classList.add('hidden');
         document.getElementById('confirm-reject-' + paymentId).classList.remove('hidden');
+    }
+    
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `p-4 rounded-xl shadow-lg text-white font-semibold transform transition-all duration-300 translate-y-10 opacity-0 ${type === 'success' ? 'bg-emerald-600' : 'bg-red-600'}`;
+        toast.innerText = message;
+        
+        container.appendChild(toast);
+        
+        // Animate in
+        setTimeout(() => {
+            toast.classList.remove('translate-y-10', 'opacity-0');
+        }, 10);
+        
+        // Remove after 3s
+        setTimeout(() => {
+            toast.classList.add('translate-y-10', 'opacity-0');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+    
+    async function submitVerification(paymentId, action) {
+        const approveBtn = document.getElementById('approve-btn-' + paymentId);
+        const confirmRejectBtn = document.getElementById('confirm-reject-' + paymentId);
+        const reasonInput = document.getElementById('reason-' + paymentId);
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        if (action === 'REJECT' && !reasonInput.value.trim()) {
+            showToast('Please provide a rejection reason.', 'error');
+            return;
+        }
+        
+        // Loading state
+        if(action === 'APPROVE') {
+            approveBtn.innerHTML = '<span class="animate-pulse">Approving...</span>';
+            approveBtn.disabled = true;
+        } else {
+            confirmRejectBtn.innerHTML = '<span class="animate-pulse">Rejecting...</span>';
+            confirmRejectBtn.disabled = true;
+        }
+        
+        try {
+            const response = await fetch(`/owner/payments/${paymentId}/verify/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    action: action,
+                    rejection_reason: reasonInput ? reasonInput.value : ''
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                closeVerificationModal('modal-' + paymentId);
+                showToast(data.message, 'success');
+                
+                // Dynamically remove card if we are filtering by IN_VERIFICATION
+                const currentStatusFilter = document.querySelector('select[name="status"]').value;
+                if (currentStatusFilter === 'IN_VERIFICATION') {
+                    const card = document.getElementById('payment-card-' + paymentId);
+                    card.classList.add('opacity-0', 'scale-95');
+                    setTimeout(() => card.remove(), 300);
+                } else {
+                    // Just reload the page to get the updated status colors
+                    setTimeout(() => window.location.reload(), 1000);
+                }
+                
+                // Update header badge dynamically if possible
+                const badge = document.querySelector('a[href="/owner/payment-verifications/"] span');
+                if (badge) {
+                    let count = parseInt(badge.innerText);
+                    if (count > 1) {
+                        badge.innerText = count - 1;
+                    } else {
+                        badge.remove();
+                    }
+                }
+            } else {
+                showToast(data.error || 'An error occurred', 'error');
+                if(action === 'APPROVE') {
+                    approveBtn.innerHTML = 'Approve';
+                    approveBtn.disabled = false;
+                } else {
+                    confirmRejectBtn.innerHTML = 'Confirm Reject';
+                    confirmRejectBtn.disabled = false;
+                }
+            }
+        } catch (error) {
+            showToast('Network error occurred.', 'error');
+            if(action === 'APPROVE') {
+                approveBtn.innerHTML = 'Approve';
+                approveBtn.disabled = false;
+            } else {
+                confirmRejectBtn.innerHTML = 'Confirm Reject';
+                confirmRejectBtn.disabled = false;
+            }
+        }
     }
 </script>
 {% endblock %}

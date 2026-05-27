@@ -19,7 +19,13 @@
                         <a href="{% url 'properties_list' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Properties</a>
                         <a href="{% url 'rooms_list' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Rooms</a>
                         <a href="{% url 'tenants_list' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Tenants</a>
-                        <a href="{% url 'invoice_list' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Finances</a>
+                        <a href="{% url 'electricity_bills_manager' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Electricity</a>
+                        <a href="{% url 'payment_verifications' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors flex items-center">
+                            Verifications
+                            {% if pending_verifications_count > 0 %}
+                            <span class="ml-1 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{{ pending_verifications_count }}</span>
+                            {% endif %}
+                        </a>
                     {% elif user.is_tenant %}
                         <a href="{% url 'tenant_dashboard' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Dashboard</a>
                         <a href="{% url 'tenant_payments' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Invoices</a>

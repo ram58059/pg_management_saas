@@ -1,12 +1,16 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .models import Invoice, Payment, ElectricityBill, PropertyPaymentSettings, PaymentProof
-from apps.tenants.models import Tenant
-from apps.properties.models import Property
-from .forms import PaymentForm, InvoiceForm, ElectricityBillForm, PropertyPaymentSettingsForm, PaymentProofForm
+from .models import Invoice, Payment, PropertyPaymentSettings, PaymentProof, RoomElectricityBill, GeneratedInvoice
+from apps.tenants.models import Tenant, TenantDue
+from apps.properties.models import Property, Room
+from .forms import PaymentForm, InvoiceForm, PropertyPaymentSettingsForm, PaymentProofForm
 from django.utils import timezone
 from django.db import transaction
+from django.db.models import Q, Sum
+from django.core.paginator import Paginator
+from django.http import JsonResponse
+import json
 
 @login_required
 def invoice_list(request):
@@ -74,52 +78,115 @@ def payment_create(request, invoice_id):
     })
 
 @login_required
-def electricity_bill_create(request):
+def electricity_bills_manager(request):
     if not request.user.is_owner():
         return redirect('tenant_dashboard')
         
     properties = Property.objects.filter(owner=request.user.pg_owner_profile)
+    selected_property_id = request.GET.get('property')
+    billing_month_str = request.GET.get('month', timezone.now().strftime('%Y-%m'))
+    
+    import datetime
+    try:
+        billing_date = datetime.datetime.strptime(billing_month_str, '%Y-%m').date()
+    except ValueError:
+        billing_date = timezone.now().date().replace(day=1)
+        billing_month_str = billing_date.strftime('%Y-%m')
+        
+    rooms_data = []
     
     if request.method == 'POST':
-        form = ElectricityBillForm(request.POST)
-        property_id = request.POST.get('pg_property')
-        
-        if form.is_valid() and property_id:
-            pg_property = get_object_or_404(Property, pk=property_id, owner=request.user.pg_owner_profile)
-            bill = form.save(commit=False)
-            bill.pg_property = pg_property
+        # AJAX form submission for a specific room
+        import json
+        try:
+            data = json.loads(request.body)
+            room_id = data.get('room_id')
+            previous_reading = float(data.get('previous_reading'))
+            current_reading = float(data.get('current_reading'))
             
-            # Find active tenants in this property
-            active_tenants = Tenant.objects.filter(pg_property=pg_property, is_active=True)
-            tenant_count = active_tenants.count()
+            room = Room.objects.get(id=room_id, pg_property__owner=request.user.pg_owner_profile)
             
-            if tenant_count > 0:
-                bill.per_tenant_amount = bill.total_bill_amount / tenant_count
-                bill.save()
+            if current_reading < previous_reading:
+                return JsonResponse({'error': 'Current reading cannot be less than previous reading.'}, status=400)
                 
-                # Add this amount to their latest pending invoice or create a new one
+            active_tenants = room.tenants.filter(is_active=True)
+            occupied_count = active_tenants.count()
+            
+            if occupied_count == 0:
+                return JsonResponse({'error': 'No active tenants in this room.'}, status=400)
+                
+            units_used = current_reading - previous_reading
+            cost_per_unit = room.pg_property.electricity_cost_per_unit
+            total_amount = units_used * float(cost_per_unit)
+            split_amount = total_amount / occupied_count
+            
+            # Check for duplicate
+            if RoomElectricityBill.objects.filter(room=room, billing_month__year=billing_date.year, billing_month__month=billing_date.month).exists():
+                return JsonResponse({'error': 'Electricity bill for this room and month already exists.'}, status=400)
+                
+            with transaction.atomic():
+                # 1. Create RoomElectricityBill
+                bill = RoomElectricityBill.objects.create(
+                    pg_property=room.pg_property,
+                    room=room,
+                    previous_reading=previous_reading,
+                    current_reading=current_reading,
+                    units_used=units_used,
+                    cost_per_unit=cost_per_unit,
+                    total_amount=total_amount,
+                    split_amount=split_amount,
+                    billing_month=billing_date,
+                    created_by=request.user
+                )
+                
+                # 2. Create TenantDue for each active tenant
+                month_identifier = f"EB for {billing_date.strftime('%B %Y')}"
                 for tenant in active_tenants:
-                    # Try to find invoice for the same month
-                    invoice = Invoice.objects.filter(
-                        tenant=tenant, 
-                        billing_month__year=bill.billing_month.year,
-                        billing_month__month=bill.billing_month.month
-                    ).first()
-                    
-                    if invoice:
-                        invoice.electricity_amount = bill.per_tenant_amount
-                        invoice.save()
-                        
-                messages.success(request, f"Electricity bill allocated. ₹{bill.per_tenant_amount} added to {tenant_count} tenants.")
-                return redirect('invoice_list')
-            else:
-                messages.error(request, "No active tenants found in this property to allocate the bill.")
-    else:
-        form = ElectricityBillForm()
+                    TenantDue.objects.create(
+                        tenant=tenant,
+                        amount=split_amount,
+                        reason='ELECTRICITY',
+                        description=month_identifier,
+                        due_date=timezone.now().date().replace(day=5), # default due date
+                        status='PENDING'
+                    )
+            
+            return JsonResponse({'status': 'SUCCESS', 'message': f'EB calculated and dues created for {occupied_count} tenants.'})
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    
+    if selected_property_id:
+        property_obj = get_object_or_404(Property, id=selected_property_id, owner=request.user.pg_owner_profile)
+        rooms = property_obj.rooms.filter(is_active=True).order_by('room_number')
         
-    return render(request, 'owner/electricity_bill_form.html', {
-        'form': form,
-        'properties': properties
+        for room in rooms:
+            occupied_count = room.tenants.filter(is_active=True).count()
+            
+            # Check if bill already generated for this month
+            is_generated = RoomElectricityBill.objects.filter(
+                room=room, 
+                billing_month__year=billing_date.year, 
+                billing_month__month=billing_date.month
+            ).exists()
+            
+            # Get previous month's reading to pre-fill
+            prev_bill = RoomElectricityBill.objects.filter(room=room).order_by('-billing_month', '-created_at').first()
+            previous_reading = prev_bill.current_reading if prev_bill else 0
+            
+            rooms_data.append({
+                'room': room,
+                'occupied_count': occupied_count,
+                'is_generated': is_generated,
+                'previous_reading': previous_reading,
+                'cost_per_unit': property_obj.electricity_cost_per_unit
+            })
+            
+    return render(request, 'owner/electricity_bills.html', {
+        'properties': properties,
+        'selected_property_id': int(selected_property_id) if selected_property_id else None,
+        'billing_month': billing_month_str,
+        'rooms_data': rooms_data
     })
 
 @login_required
@@ -177,48 +244,116 @@ def payment_verifications(request):
         return redirect('tenant_login')
         
     properties = Property.objects.filter(owner=request.user.pg_owner_profile)
-    selected_property_id = request.GET.get('property')
+    
+    # Get filters
+    search_query = request.GET.get('q', '')
+    selected_property_id = request.GET.get('property', '')
+    status_filter = request.GET.get('status', 'IN_VERIFICATION')
+    month_filter = request.GET.get('month', '')
+    date_filter = request.GET.get('date', '')
     
     payments = Payment.objects.filter(
-        invoice__tenant__pg_property__owner=request.user.pg_owner_profile,
-        status='SCREENSHOT_UPLOADED'
-    ).order_by('created_at')
+        Q(invoice__tenant__pg_property__owner=request.user.pg_owner_profile) |
+        Q(tenant_due__tenant__pg_property__owner=request.user.pg_owner_profile) |
+        Q(tenant__pg_property__owner=request.user.pg_owner_profile)
+    ).distinct().order_by('-created_at')
     
+    if status_filter:
+        payments = payments.filter(status=status_filter)
+        
+    if search_query:
+        payments = payments.filter(
+            Q(invoice__tenant__user__first_name__icontains=search_query) |
+            Q(invoice__tenant__user__last_name__icontains=search_query) |
+            Q(tenant_due__tenant__user__first_name__icontains=search_query) |
+            Q(tenant_due__tenant__user__last_name__icontains=search_query) |
+            Q(tenant__user__first_name__icontains=search_query) |
+            Q(tenant__user__last_name__icontains=search_query)
+        )
+        
     if selected_property_id:
-        payments = payments.filter(invoice__tenant__pg_property_id=selected_property_id)
+        payments = payments.filter(
+            Q(invoice__tenant__pg_property_id=selected_property_id) |
+            Q(tenant_due__tenant__pg_property_id=selected_property_id) |
+            Q(tenant__pg_property_id=selected_property_id)
+        )
+        
+    if month_filter:
+        payments = payments.filter(created_at__month=month_filter.split('-')[1], created_at__year=month_filter.split('-')[0])
+        
+    if date_filter:
+        payments = payments.filter(created_at__date=date_filter)
+        
+    paginator = Paginator(payments, 12)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
         
     return render(request, 'owner/payment_verifications.html', {
         'properties': properties,
         'selected_property_id': int(selected_property_id) if selected_property_id else None,
-        'payments': payments
+        'page_obj': page_obj,
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'month_filter': month_filter,
+        'date_filter': date_filter
     })
 
 @login_required
 def verify_payment(request, payment_id):
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.content_type == 'application/json'
+    
     if not request.user.is_owner():
+        if is_ajax:
+            return JsonResponse({'error': 'Unauthorized'}, status=403)
         return redirect('tenant_login')
         
-    payment = get_object_or_404(Payment, pk=payment_id, invoice__tenant__pg_property__owner=request.user.pg_owner_profile)
+    payment = get_object_or_404(Payment, pk=payment_id)
+    
+    # Check permissions
+    owner = request.user.pg_owner_profile
+    is_valid = False
+    if payment.invoice and payment.invoice.tenant.pg_property.owner == owner:
+        is_valid = True
+    elif payment.tenant_due and payment.tenant_due.tenant.pg_property.owner == owner:
+        is_valid = True
+    elif payment.tenant and payment.tenant.pg_property.owner == owner:
+        is_valid = True
+        
+    if not is_valid:
+        if is_ajax:
+            return JsonResponse({'error': 'Unauthorized'}, status=403)
+        return redirect('tenant_login')
     
     if request.method == 'POST':
-        action = request.POST.get('action')
+        try:
+            data = json.loads(request.body)
+            action = data.get('action')
+            rejection_reason = data.get('rejection_reason', '')
+        except (json.JSONDecodeError, TypeError):
+            action = request.POST.get('action')
+            rejection_reason = request.POST.get('rejection_reason', '')
+            
         proof = payment.proof
         
         if action == 'APPROVE':
-            payment.status = 'APPROVED'
+            payment.status = 'SUCCESS'
             proof.verified_by = request.user
             proof.verified_at = timezone.now()
             proof.save()
             payment.save()
+            if is_ajax:
+                return JsonResponse({'status': 'SUCCESS', 'message': f'Payment #{payment.id} verified and approved.'})
             messages.success(request, f"Payment #{payment.id} verified and approved.")
+            
         elif action == 'REJECT':
-            rejection_reason = request.POST.get('rejection_reason')
             payment.status = 'REJECTED'
             proof.verified_by = request.user
-            proof.verified_at = timezone.now()
+            proof.rejected_at = timezone.now()
             proof.rejection_reason = rejection_reason
             proof.save()
             payment.save()
+            if is_ajax:
+                return JsonResponse({'status': 'REJECTED', 'message': f'Payment #{payment.id} rejected.'})
             messages.success(request, f"Payment #{payment.id} rejected.")
             
     return redirect('payment_verifications')
@@ -229,11 +364,36 @@ def tenant_payments(request):
         return redirect('owner_login')
         
     tenant = request.user.tenant_profile
-    invoices = Invoice.objects.filter(tenant=tenant).order_by('-created_at')
+    # We show generated PDF invoices here as per the new requirement
+    invoices = GeneratedInvoice.objects.filter(tenant=tenant).select_related('payment').order_by('-generated_at')
     
     return render(request, 'tenant/payments.html', {
         'invoices': invoices
     })
+
+@login_required
+def download_invoice(request, invoice_id):
+    invoice = get_object_or_404(GeneratedInvoice, pk=invoice_id)
+    
+    # Security check: Only the tenant or the owner can download it
+    is_authorized = False
+    if request.user.is_tenant() and invoice.tenant.user == request.user:
+        is_authorized = True
+    elif request.user.is_owner() and invoice.pg_property.owner == request.user.pg_owner_profile:
+        is_authorized = True
+        
+    if not is_authorized:
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.content_type == 'application/json':
+            return JsonResponse({'error': 'Unauthorized'}, status=403)
+        messages.error(request, 'Unauthorized to download this invoice.')
+        return redirect('tenant_dashboard' if request.user.is_tenant() else 'owner_dashboard')
+        
+    if not invoice.pdf_file:
+        messages.error(request, 'Invoice PDF not generated yet.')
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+        
+    # Redirect to S3 URL for download
+    return redirect(invoice.pdf_file.url)
 
 @login_required
 def tenant_pay_rent(request, invoice_id):
@@ -251,10 +411,9 @@ def tenant_pay_rent(request, invoice_id):
             invoice=invoice,
             amount=amount,
             payment_method='UPI',
-            status='PENDING',
-            payment_date=timezone.now().date()
+            status='PENDING'
         )
-        return redirect('tenant_upload_proof', payment_id=payment.id)
+        return redirect('tenant_payment_page', payment_id=payment.id)
         
     return render(request, 'tenant/pay_rent.html', {
         'invoice': invoice,
@@ -263,11 +422,45 @@ def tenant_pay_rent(request, invoice_id):
     })
 
 @login_required
-def tenant_upload_proof(request, payment_id):
+def tenant_payment_intent(request):
     if not request.user.is_tenant():
         return redirect('owner_login')
         
-    payment = get_object_or_404(Payment, pk=payment_id, invoice__tenant=request.user.tenant_profile)
+    tenant = request.user.tenant_profile
+    
+    # Calculate total due
+    total_invoice_due = sum(inv.remaining_due for inv in tenant.invoices.filter(status__in=['PENDING', 'PARTIAL']))
+    total_dues = tenant.dues.filter(status__in=['PENDING', 'PARTIAL']).aggregate(total=Sum('amount'))['total'] or 0
+    
+    active_due = total_invoice_due + total_dues
+    
+    if active_due <= 0:
+        messages.info(request, "You have no pending dues.")
+        return redirect('tenant_dashboard')
+        
+    payment = Payment.objects.create(
+        tenant=tenant,
+        amount=active_due,
+        payment_method='UPI',
+        status='PENDING'
+    )
+    
+    return redirect('tenant_payment_page', payment_id=payment.id)
+
+@login_required
+def tenant_payment_page(request, payment_id):
+    if not request.user.is_tenant():
+        return redirect('owner_login')
+        
+    payment = get_object_or_404(Payment, pk=payment_id)
+    tenant = request.user.tenant_profile
+    
+    if (payment.invoice and payment.invoice.tenant != tenant) or \
+       (payment.tenant_due and payment.tenant_due.tenant != tenant) or \
+       (payment.tenant and payment.tenant != tenant):
+        return redirect('tenant_dashboard')
+        
+    settings = PropertyPaymentSettings.objects.filter(pg_property=tenant.pg_property).first()
     
     # Check if a proof already exists (in case they went back or are re-uploading a rejected payment)
     existing_proof = getattr(payment, 'proof', None)
@@ -280,17 +473,18 @@ def tenant_upload_proof(request, payment_id):
                 proof.payment = payment
                 proof.save()
                 
-                payment.status = 'SCREENSHOT_UPLOADED'
+                payment.status = 'IN_VERIFICATION'
                 payment.save()
                 
             messages.success(request, "Payment proof uploaded successfully. Waiting for verification.")
-            return redirect('tenant_payment_history')
+            return redirect('tenant_dashboard')
     else:
         form = PaymentProofForm(instance=existing_proof)
         
-    return render(request, 'tenant/upload_proof.html', {
+    return render(request, 'tenant/payment_page.html', {
         'payment': payment,
-        'form': form
+        'form': form,
+        'settings': settings
     })
 
 @login_required
@@ -298,7 +492,12 @@ def tenant_payment_history(request):
     if not request.user.is_tenant():
         return redirect('owner_login')
         
-    payments = Payment.objects.filter(invoice__tenant=request.user.tenant_profile).order_by('-created_at')
+    tenant = request.user.tenant_profile
+    payments = Payment.objects.filter(
+        Q(invoice__tenant=tenant) |
+        Q(tenant_due__tenant=tenant) |
+        Q(tenant=tenant)
+    ).distinct().order_by('-created_at')
     
     return render(request, 'tenant/payment_history.html', {
         'payments': payments
