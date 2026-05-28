@@ -1,7 +1,8 @@
 from django.db import models
 from django.utils import timezone
 from apps.tenants.models import Tenant
-from utils.file_uploads import get_payment_screenshot_upload_path
+from utils.file_uploads import get_payment_screenshot_upload_path, get_property_qrcode_upload_path, get_invoice_upload_path
+from utils.validators import validate_file_size, validate_image_extension, validate_pdf_extension
 
 class Invoice(models.Model):
     STATUS_CHOICES = (
@@ -136,7 +137,7 @@ class Payment(models.Model):
 
 class PaymentProof(models.Model):
     payment = models.OneToOneField(Payment, on_delete=models.CASCADE, related_name='proof')
-    screenshot = models.ImageField(upload_to=get_payment_screenshot_upload_path)
+    screenshot = models.ImageField(upload_to=get_payment_screenshot_upload_path, validators=[validate_file_size, validate_image_extension])
     utr_number = models.CharField(max_length=50)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     verified_by = models.ForeignKey('accounts.CustomUser', null=True, blank=True, on_delete=models.SET_NULL)
@@ -148,7 +149,7 @@ class PropertyPaymentSettings(models.Model):
     pg_property = models.OneToOneField('properties.Property', on_delete=models.CASCADE, related_name='payment_settings')
     upi_id = models.CharField(max_length=100)
     account_holder_name = models.CharField(max_length=100)
-    qr_code_image = models.ImageField(upload_to='upi_qr_codes/', null=True, blank=True)
+    qr_code_image = models.ImageField(upload_to=get_property_qrcode_upload_path, null=True, blank=True, validators=[validate_file_size, validate_image_extension])
 
 class RoomElectricityBill(models.Model):
     pg_property = models.ForeignKey('properties.Property', on_delete=models.CASCADE, related_name='electricity_bills')
@@ -188,7 +189,7 @@ class GeneratedInvoice(models.Model):
     invoice_month = models.DateField()
     invoice_year = models.IntegerField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PAID')
-    pdf_file = models.FileField(upload_to='invoices/%Y/%m/', null=True, blank=True)
+    pdf_file = models.FileField(upload_to=get_invoice_upload_path, null=True, blank=True, validators=[validate_file_size, validate_pdf_extension])
     generated_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

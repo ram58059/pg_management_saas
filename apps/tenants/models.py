@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError
 from apps.accounts.models import CustomUser, PGOwner
 from apps.properties.models import Property, Room
 from utils.file_uploads import get_tenant_document_upload_path, get_tenant_photo_upload_path
+from utils.validators import validate_file_size, validate_image_extension, validate_document_extension
 
 class Tenant(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='tenant_profile')
@@ -19,14 +20,16 @@ class Tenant(models.Model):
     deposit_amount = models.DecimalField(max_digits=10, decimal_places=2)
     is_active = models.BooleanField(default=True)
     
-    profile_photo = models.ImageField(upload_to=get_tenant_photo_upload_path, blank=True, null=True)
+    profile_photo = models.ImageField(upload_to=get_tenant_photo_upload_path, blank=True, null=True, validators=[validate_file_size, validate_image_extension])
     
     def clean(self):
         super().clean()
         if self.pk:
             old_tenant = Tenant.objects.get(pk=self.pk)
             # If the old tenant had a photo, and it's being changed or deleted, raise an error
-            if old_tenant.profile_photo and self.profile_photo != old_tenant.profile_photo:
+            if getattr(self, '_skip_photo_lock', False):
+                pass
+            elif old_tenant.profile_photo and self.profile_photo != old_tenant.profile_photo:
                 raise ValidationError({'profile_photo': 'Tenant photo is permanently locked after upload.'})
                 
     def save(self, *args, **kwargs):
@@ -65,5 +68,5 @@ class TenantDue(models.Model):
 class TenantDocument(models.Model):
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='documents')
     document_type = models.CharField(max_length=50)
-    file = models.FileField(upload_to=get_tenant_document_upload_path)
+    file = models.FileField(upload_to=get_tenant_document_upload_path, validators=[validate_file_size, validate_document_extension])
     uploaded_at = models.DateTimeField(auto_now_add=True)

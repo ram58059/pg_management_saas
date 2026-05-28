@@ -69,8 +69,8 @@ def get_payment_screenshot_upload_path(instance, filename):
 
 def get_tenant_document_upload_path(instance, filename):
     """
-    Format: tenant_documents/YYYY/MM/propertyname_tenantname_doctype_timestamp.ext
-    Example: thoraipakkam_arun_aadhaar_20260527_183045.pdf
+    Format: tenant_documents/YYYY/MM/propertyname_roomnumber_tenantname_doctype_timestamp.ext
+    Example: thoraipakkam_room203_arun_aadhaar_20260527_183045.pdf
     """
     ext = filename.split('.')[-1] if '.' in filename else ''
     
@@ -78,9 +78,10 @@ def get_tenant_document_upload_path(instance, filename):
     document_type = getattr(instance, 'document_type', 'document')
     
     property_name = tenant.pg_property.name if tenant and tenant.pg_property else "unknown-property"
+    room_number = f"room{tenant.room.room_number}" if tenant and getattr(tenant, 'room', None) else "unknown-room"
     tenant_name = tenant.user.get_full_name() if tenant else "unknown-tenant"
     
-    parts = [property_name, tenant_name, document_type]
+    parts = [property_name, room_number, tenant_name, document_type]
     
     new_filename, now = generate_safe_filename(parts, ext)
     folder_path = os.path.join('tenant_documents', now.strftime('%Y'), now.strftime('%m'))
@@ -89,27 +90,28 @@ def get_tenant_document_upload_path(instance, filename):
 
 def get_agreement_upload_path(instance, filename):
     """
-    Format: agreements/YYYY/MM/propertyname_tenantname_agreement_timestamp.ext
-    Example: padur-boys_karthik_agreement_20260527_183045.pdf
+    Format: agreements/YYYY/MM/propertyname_roomnumber_tenantname_agreement_timestamp.ext
+    Example: padur-boys_room101_karthik_agreement_20260527_183045.pdf
     """
     ext = filename.split('.')[-1] if '.' in filename else ''
     
     tenant = getattr(instance, 'tenant', None)
     
     property_name = tenant.pg_property.name if tenant and tenant.pg_property else "unknown-property"
+    room_number = f"room{tenant.room.room_number}" if tenant and getattr(tenant, 'room', None) else "unknown-room"
     tenant_name = tenant.user.get_full_name() if tenant else "unknown-tenant"
     
-    parts = [property_name, tenant_name, 'agreement']
+    parts = [property_name, room_number, tenant_name, 'agreement']
     
     new_filename, now = generate_safe_filename(parts, ext)
     folder_path = os.path.join('agreements', now.strftime('%Y'), now.strftime('%m'))
     
     return os.path.join(folder_path, new_filename)
 
-def get_receipt_upload_path(instance, filename):
+def get_invoice_upload_path(instance, filename):
     """
-    Format: receipts/YYYY/MM/tenantname_receipt_month_year_timestamp.pdf
-    Example: priya_receipt_may_2026_20260527_183045.pdf
+    Format: invoices/YYYY/MM/tenantname_invoice_month_year_timestamp.pdf
+    Example: priya_invoice_may_2026_20260527_183045.pdf
     """
     ext = filename.split('.')[-1] if '.' in filename else ''
     
@@ -126,10 +128,26 @@ def get_receipt_upload_path(instance, filename):
         month_str = now.strftime('%b')
         year_str = now.strftime('%Y')
         
-    parts = [tenant_name, 'receipt', month_str, year_str]
+    parts = [tenant_name, 'invoice', month_str, year_str]
     
     new_filename, now = generate_safe_filename(parts, ext)
-    folder_path = os.path.join('receipts', now.strftime('%Y'), now.strftime('%m'))
+    folder_path = os.path.join('invoices', now.strftime('%Y'), now.strftime('%m'))
+    
+    return os.path.join(folder_path, new_filename)
+
+def get_property_qrcode_upload_path(instance, filename):
+    """
+    Format: property_qr_codes/YYYY/MM/propertyname_qrcode_timestamp.ext
+    Example: thoraipakkam_qrcode_20260527_183045.png
+    """
+    ext = filename.split('.')[-1] if '.' in filename else ''
+    
+    property_name = getattr(instance.pg_property, 'name', 'unknown-property') if getattr(instance, 'pg_property', None) else "unknown-property"
+    
+    parts = [property_name, 'qrcode']
+    
+    new_filename, now = generate_safe_filename(parts, ext)
+    folder_path = os.path.join('property_qr_codes', now.strftime('%Y'), now.strftime('%m'))
     
     return os.path.join(folder_path, new_filename)
 
