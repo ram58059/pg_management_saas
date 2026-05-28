@@ -10,7 +10,7 @@ services:
     name: pg_management_saas
     runtime: python
     buildCommand: './build.sh'
-    startCommand: 'python -m gunicorn pg_management_saas.asgi:application -k uvicorn.workers.UvicornWorker'
+    startCommand: 'python -m gunicorn config.asgi:application -k uvicorn.workers.UvicornWorker'
     envVars:
       - key: DATABASE_URL
         fromDatabase:
