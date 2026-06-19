@@ -179,13 +179,11 @@
 
 .stayi-page-content {
   opacity: 0;
-  transform: translateY(4px);
-  transition: opacity 0.35s ease, transform 0.35s ease;
+  transition: opacity 0.35s ease;
 }
 
 html.stayi-page-ready .stayi-page-content {
   opacity: 1;
-  transform: translateY(0);
 }
 
 html.stayi-nav-loading .stayi-loader-overlay {

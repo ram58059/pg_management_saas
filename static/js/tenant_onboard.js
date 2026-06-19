@@ -90,6 +90,10 @@ function initTenantSuccessModal() {
         return;
     }
 
+    if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+    }
+
     const username = modal.dataset.username || '';
     const password = modal.dataset.password || '';
     const closeButton = document.getElementById('close-success-modal-btn');

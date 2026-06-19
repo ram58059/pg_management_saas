@@ -1,0 +1,76 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block title %}Stayi Tenant{% endblock %}
+
+{% block body_class %}bg-slate-50 antialiased{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'css/owner-portal.css' %}?v=1" rel="stylesheet">
+<style>
+    .owner-content .input-field,
+    .owner-content select.input-field,
+    .owner-content textarea.input-field {
+        border-color: #e2e8f0;
+        border-radius: 0.75rem;
+        padding-top: 0.625rem;
+        padding-bottom: 0.625rem;
+        background: #fff;
+    }
+    .owner-content .input-field:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    }
+    .owner-content .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1rem;
+        border-radius: 0.75rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+        color: #fff;
+        box-shadow: 0 10px 25px -12px rgba(79, 70, 229, 0.8);
+        transition: all 0.2s ease;
+    }
+    .owner-content .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 30px -12px rgba(79, 70, 229, 0.9);
+    }
+</style>
+{% endblock %}
+
+{% block navbar %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block main_class %}flex-grow w-full max-w-none p-0{% endblock %}
+
+{% block messages %}
+{% include 'components/owner_messages.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="owner-shell">
+    {% include 'components/tenant_sidebar.html' %}
+
+    <div class="owner-main">
+        <header class="owner-topbar lg:hidden">
+            <button type="button" id="tenant-sidebar-open" class="owner-btn owner-btn-secondary owner-btn-icon" aria-label="Open navigation menu">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
+            <div class="font-semibold text-slate-900 tracking-tight">Stayi Tenant</div>
+            <div class="w-9" aria-hidden="true"></div>
+        </header>
+
+        <div class="owner-content">
+            {% block tenant_content %}{% endblock %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/tenant-portal.js' %}?v=1"></script>
+{% block tenant_extra_js %}{% endblock %}
+{% endblock %}

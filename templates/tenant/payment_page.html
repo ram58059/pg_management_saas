@@ -1,119 +1,121 @@
-{% extends 'layouts/base.html' %}
+{% extends 'layouts/tenant_base.html' %}
 
-{% block title %}Upload Proof - PG Management{% endblock %}
+{% block title %}Upload Proof · Stayi Tenant{% endblock %}
 
-{% block content %}
-<div class="max-w-2xl mx-auto">
-    <div class="mb-8 text-center">
-        <h1 class="text-3xl font-black text-gray-900 tracking-tight">Make a Payment</h1>
-        <p class="text-gray-500 font-medium mt-2">Pay your dues securely and upload the proof</p>
+{% block tenant_content %}
+<header class="owner-page-header">
+    <div>
+        <h1 class="owner-page-title">Make a Payment</h1>
+        <p class="owner-page-description">Pay your dues securely and upload the proof.</p>
     </div>
+</header>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <!-- Payment Details & Instructions -->
-        <div class="space-y-6">
-            <div class="card p-6 bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100">
-                <h3 class="text-lg font-bold text-indigo-900 mb-4 flex items-center">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                    Payment Details
-                </h3>
-                
-                <div class="bg-white p-4 rounded-xl shadow-sm mb-4">
-                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Amount to Pay</p>
-                    <p class="text-3xl font-black text-gray-900">₹{{ payment.amount }}</p>
-                </div>
-                
-                <div class="bg-white p-4 rounded-xl shadow-sm mb-4 text-center">
-                    {% if settings.qr_code_image %}
-                        <img src="{{ settings.qr_code_image.url }}" alt="UPI QR Code" class="w-48 h-48 mx-auto rounded-lg shadow-sm mb-3">
-                    {% else %}
-                        <div class="w-48 h-48 mx-auto bg-gray-100 rounded-lg flex items-center justify-center mb-3">
-                            <span class="text-gray-400 text-sm">No QR Code Available</span>
-                        </div>
-                    {% endif %}
-                    <p class="text-sm font-semibold text-gray-900">{{ settings.account_holder_name|default:"Property Owner" }}</p>
-                    <div class="mt-2 flex items-center justify-center space-x-2">
-                        <span class="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full font-mono" id="upiId">{{ settings.upi_id|default:"Not Provided" }}</span>
-                        <button onclick="copyUpiId()" class="text-indigo-600 hover:text-indigo-800 p-1 rounded-full hover:bg-indigo-50 transition" title="Copy UPI ID">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
-                        </button>
-                    </div>
-                </div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="space-y-6">
+        <div class="owner-card p-6 bg-gradient-to-br from-indigo-50 to-blue-50 border-indigo-100">
+            <h3 class="text-lg font-bold text-indigo-900 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                Payment Details
+            </h3>
+
+            <div class="bg-white p-4 rounded-xl shadow-sm mb-4">
+                <p class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Amount to Pay</p>
+                <p class="text-3xl font-bold text-slate-900">₹{{ payment.amount }}</p>
             </div>
 
-            <div class="card p-6">
-                <h3 class="font-bold text-gray-900 mb-4">Instructions</h3>
-                <ol class="space-y-3 text-sm text-gray-600 list-decimal list-inside">
-                    <li>Scan the QR code using any UPI app (GPay, PhonePe, Paytm).</li>
-                    <li>Pay the exact amount of <span class="font-bold text-gray-900">₹{{ payment.amount }}</span>.</li>
-                    <li>Take a screenshot of the successful transaction.</li>
-                    <li>Upload the screenshot and enter the date you made the UPI payment.</li>
-                </ol>
+            <div class="bg-white p-4 rounded-xl shadow-sm text-center">
+                {% if settings.qr_code_image %}
+                <img src="{{ settings.qr_code_image.url }}" alt="UPI QR Code" class="w-48 h-48 mx-auto rounded-lg shadow-sm mb-3">
+                {% else %}
+                <div class="w-48 h-48 mx-auto bg-slate-100 rounded-lg flex items-center justify-center mb-3">
+                    <span class="text-slate-400 text-sm">No QR Code Available</span>
+                </div>
+                {% endif %}
+                <p class="text-sm font-semibold text-slate-900">{{ settings.account_holder_name|default:"Property Owner" }}</p>
+                <div class="mt-2 flex items-center justify-center gap-2">
+                    <span class="text-sm text-slate-600 bg-slate-100 px-3 py-1 rounded-full font-mono" id="upiId">{{ settings.upi_id|default:"Not Provided" }}</span>
+                    <button type="button" onclick="copyUpiId()" class="text-indigo-600 hover:text-indigo-800 p-1 rounded-full hover:bg-indigo-50 transition" title="Copy UPI ID">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                    </button>
+                </div>
             </div>
         </div>
 
-        <!-- Upload Form -->
-        <div class="card p-8 h-fit">
-            <h3 class="text-lg font-bold text-gray-900 mb-6">Upload Proof</h3>
+        <div class="owner-card p-6">
+            <h3 class="font-bold text-slate-900 mb-4">Instructions</h3>
+            <ol class="space-y-3 text-sm text-slate-600 list-decimal list-inside">
+                <li>Scan the QR code using any UPI app (GPay, PhonePe, Paytm).</li>
+                <li>Pay the exact amount of <span class="font-bold text-slate-900">₹{{ payment.amount }}</span>.</li>
+                <li>Take a screenshot of the successful transaction.</li>
+                <li>Upload the screenshot and enter the date you made the UPI payment.</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="owner-card owner-form-card h-fit">
+        <h3 class="text-lg font-bold text-slate-900 mb-6">Upload Proof</h3>
 
         {% if payment.status == 'REJECTED' %}
-        <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r-lg">
-            <h3 class="text-red-800 font-bold text-sm">Previous Proof Rejected</h3>
-            <p class="text-red-700 mt-1 text-sm">{{ payment.proof.rejection_reason }}</p>
-            <p class="text-red-700 mt-2 text-xs font-medium">Please upload a valid screenshot and enter the correct UPI payment date.</p>
+        <div class="owner-alert owner-alert-error mb-6">
+            <div>
+                <strong>Previous proof rejected</strong>
+                <p class="mt-1 text-sm">{{ payment.proof.rejection_reason }}</p>
+                <p class="mt-2 text-xs">Please upload a valid screenshot and enter the correct UPI payment date.</p>
+            </div>
         </div>
         {% endif %}
 
         <form method="POST" enctype="multipart/form-data" class="space-y-6" data-stayi-loading="Submitting proof for verification...">
             {% csrf_token %}
-            
+
             <div class="space-y-4">
                 {% for field in form %}
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">
+                    <label class="owner-form-label">
                         {{ field.label }}
                         {% if field.field.required %}<span class="text-red-500">*</span>{% endif %}
                     </label>
-                    
+
                     {% if field.name == 'screenshot' %}
-                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-xl bg-gray-50 hover:bg-gray-100 transition relative overflow-hidden group">
+                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-xl bg-slate-50 hover:bg-slate-100 transition relative overflow-hidden group">
                         <div class="space-y-1 text-center" id="uploadPlaceholder">
-                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                            <svg class="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
                                 <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
-                            <div class="flex text-sm text-gray-600 justify-center">
-                                <label for="{{ field.id_for_label }}" class="relative cursor-pointer bg-white rounded-md font-medium text-primary-600 hover:text-primary-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary-500 p-1">
+                            <div class="flex text-sm text-slate-600 justify-center">
+                                <label for="{{ field.id_for_label }}" class="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500 p-1">
                                     <span>Upload a file</span>
                                     <input type="file" name="{{ field.name }}" id="{{ field.id_for_label }}" accept="image/*" class="sr-only" onchange="previewImage(event)" {% if field.field.required %}required{% endif %}>
                                 </label>
                             </div>
-                            <p class="text-xs text-gray-500">PNG, JPG, WEBP up to 5MB</p>
+                            <p class="text-xs text-slate-500">PNG, JPG, WEBP up to 5MB</p>
                         </div>
-                        <img id="imagePreview" class="hidden absolute inset-0 w-full h-full object-contain bg-black bg-opacity-10 z-10" />
-                        <label for="{{ field.id_for_label }}" id="changeImageBtn" class="hidden absolute bottom-2 right-2 bg-white px-3 py-1 rounded shadow text-xs font-bold text-gray-700 cursor-pointer z-20 hover:bg-gray-50">Change</label>
+                        <img id="imagePreview" class="hidden absolute inset-0 w-full h-full object-contain bg-black bg-opacity-10 z-10" alt="Payment proof preview">
+                        <label for="{{ field.id_for_label }}" id="changeImageBtn" class="hidden absolute bottom-2 right-2 bg-white px-3 py-1 rounded shadow text-xs font-bold text-slate-700 cursor-pointer z-20 hover:bg-slate-50">Change</label>
                     </div>
                     {% else %}
-                        {{ field }}
+                    {{ field }}
                     {% endif %}
-                    
+
                     {% if field.help_text %}
-                    <p class="text-xs text-gray-500 mt-1">{{ field.help_text }}</p>
+                    <p class="text-xs text-slate-500 mt-1">{{ field.help_text }}</p>
                     {% endif %}
                     {% if field.errors %}
-                    <p class="text-sm text-red-600 mt-1">{{ field.errors.0 }}</p>
+                    <p class="owner-form-error">{{ field.errors.0 }}</p>
                     {% endif %}
                 </div>
                 {% endfor %}
             </div>
-            
-            <button type="submit" class="w-full btn-primary py-4 text-lg font-bold shadow-lg hover:shadow-xl mt-6">
+
+            <button type="submit" class="owner-btn owner-btn-primary w-full py-4 text-base font-bold mt-2">
                 Submit Proof for Verification
             </button>
         </form>
-        </div>
     </div>
 </div>
+{% endblock %}
 
+{% block tenant_extra_js %}
 <script>
     function copyUpiId() {
         const upiId = document.getElementById('upiId').innerText;
@@ -132,11 +134,11 @@
                 const preview = document.getElementById('imagePreview');
                 const placeholder = document.getElementById('uploadPlaceholder');
                 const changeBtn = document.getElementById('changeImageBtn');
-                
+
                 preview.src = e.target.result;
                 preview.classList.remove('hidden');
                 changeBtn.classList.remove('hidden');
-                placeholder.classList.add('invisible'); // hide but keep space
+                placeholder.classList.add('invisible');
             }
             reader.readAsDataURL(input.files[0]);
         }

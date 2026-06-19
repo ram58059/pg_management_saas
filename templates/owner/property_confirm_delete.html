@@ -1,41 +1,34 @@
-{% extends 'layouts/base.html' %}
+{% extends 'layouts/owner_base.html' %}
 
-{% block title %}Delete Property | PG Management{% endblock %}
+{% block title %}Delete Property · Stayi Owner{% endblock %}
 
-{% block content %}
-<div class="mb-6">
-    <div class="flex items-center space-x-2 text-sm text-gray-500 mb-2">
-        <a href="{% url 'properties_list' %}" class="hover:text-primary-600">Properties</a>
-        <span>/</span>
-        <span class="text-gray-900 font-medium">Delete {{ property.name }}</span>
+{% block owner_content %}
+<header class="owner-page-header">
+    <div>
+        <nav class="flex items-center gap-2 text-sm text-slate-500 mb-2" aria-label="Breadcrumb">
+            <a href="{% url 'properties_list' %}" class="hover:text-indigo-600">Properties</a>
+            <span>/</span>
+            <span class="text-slate-900 font-medium">Delete {{ property.name }}</span>
+        </nav>
+        <h1 class="owner-page-title">Delete Property</h1>
     </div>
-    <h1 class="text-2xl font-bold text-gray-900">Delete Property</h1>
-</div>
+</header>
 
-<div class="card max-w-xl">
-    <div class="p-6">
-        <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
-            <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-        </div>
-        
-        <div class="text-center">
-            <h3 class="mb-2 text-lg font-bold text-gray-900">Are you sure you want to delete this property?</h3>
-            <p class="text-gray-500">
-                You are about to delete <strong>{{ property.name }}</strong>. 
-                This action will also delete all rooms associated with this property.
-                This action cannot be undone.
-            </p>
-        </div>
-        
-        <form method="post" class="mt-8 flex justify-center space-x-3">
-            {% csrf_token %}
-            <a href="{% url 'properties_list' %}" class="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-                Cancel, keep it
-            </a>
-            <button type="submit" class="px-4 py-2 bg-red-600 text-white shadow-sm text-sm font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                Yes, delete property
-            </button>
-        </form>
+<div class="owner-card owner-form-card max-w-xl mx-auto text-center">
+    <div class="owner-empty-icon mx-auto">
+        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
     </div>
+
+    <h3 class="owner-empty-title">Are you sure?</h3>
+    <p class="owner-empty-text">
+        You are about to delete <strong>{{ property.name }}</strong>.
+        This will also delete all associated rooms. This action cannot be undone.
+    </p>
+
+    <form method="post" class="mt-8 flex flex-col sm:flex-row justify-center gap-3">
+        {% csrf_token %}
+        <a href="{% url 'properties_list' %}" class="owner-btn owner-btn-secondary">Cancel, keep it</a>
+        <button type="submit" class="owner-btn owner-btn-danger bg-red-600 text-white border-red-600 hover:bg-red-700">Yes, delete property</button>
+    </form>
 </div>
 {% endblock %}

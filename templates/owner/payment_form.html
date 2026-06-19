@@ -1,21 +1,23 @@
-{% extends 'layouts/base.html' %}
+{% extends 'layouts/owner_base.html' %}
 
 {% block title %}Record Payment | PG Management{% endblock %}
 
-{% block content %}
-<div class="mb-6">
-    <div class="flex items-center space-x-2 text-sm text-gray-500 mb-2">
-        <a href="{% url 'owner_dashboard' %}" class="hover:text-primary-600">Dashboard</a>
-        <span>/</span>
-        <span class="text-gray-900 font-medium">Record Payment</span>
+{% block owner_content %}
+<header class="owner-page-header">
+    <div>
+        <nav class="flex items-center gap-2 text-sm text-slate-500 mb-2" aria-label="Breadcrumb">
+            <a href="{% url 'owner_dashboard' %}" class="hover:text-indigo-600">Dashboard</a>
+            <span>/</span>
+            <span class="text-slate-900 font-medium">Record Payment</span>
+        </nav>
+        <h1 class="owner-page-title">Record Payment</h1>
+        <p class="owner-page-description">{{ invoice.tenant.user.get_full_name }}</p>
     </div>
-    <h1 class="text-2xl font-bold text-gray-900">Record Payment for {{ invoice.tenant.user.get_full_name }}</h1>
-</div>
+</header>
 
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-    <!-- Invoice Details -->
     <div class="md:col-span-1">
-        <div class="card p-6 bg-gray-50 border-gray-200">
+        <div class="owner-card p-6 bg-slate-50/80">
             <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Invoice Summary</h3>
             <div class="space-y-4">
                 <div>

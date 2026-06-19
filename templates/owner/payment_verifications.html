@@ -1,16 +1,16 @@
-{% extends 'layouts/base.html' %}
+{% extends 'layouts/owner_base.html' %}
 
 {% block title %}Verify Payments - PG Management{% endblock %}
 
-{% block content %}
-<div class="mb-8 flex justify-between items-end">
+{% block owner_content %}
+<header class="owner-page-header">
     <div>
-        <h1 class="text-3xl font-black text-gray-900 tracking-tight">Payment Verifications</h1>
-        <p class="text-gray-500 font-medium mt-1">Review and approve tenant rent payments</p>
+        <h1 class="owner-page-title">Payment Verifications</h1>
+        <p class="owner-page-description">Review and approve tenant rent payments.</p>
     </div>
-</div>
+</header>
 
-<div class="card p-6 mb-8 border-t-4 border-t-indigo-500">
+<div class="owner-filter-panel mb-8">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4" data-stayi-loading="Applying filters...">
         <div>
             <label class="block text-sm font-semibold text-gray-700 mb-1">Search Tenant</label>
@@ -43,7 +43,7 @@
                 <label class="block text-sm font-semibold text-gray-700 mb-1">Specific Date</label>
                 <input type="date" name="date" value="{{ date_filter }}" class="input-field block w-full text-sm">
             </div>
-            <button type="submit" class="btn-primary bg-indigo-600 hover:bg-indigo-700 py-2.5 px-4 h-full">Filter</button>
+            <button type="submit" class="owner-btn owner-btn-primary py-2.5 px-4 h-full">Filter</button>
         </div>
     </form>
 </div>
@@ -54,7 +54,7 @@
 {% if page_obj %}
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8" id="payments-grid">
     {% for payment in page_obj %}
-    <div class="card p-5 border border-indigo-100 hover:border-indigo-300 transition-colors" id="payment-card-{{ payment.id }}">
+    <div class="owner-card p-5" id="payment-card-{{ payment.id }}">
         <div class="flex justify-between items-start mb-4">
             <div>
                 <h3 class="font-bold text-gray-900 text-lg">{{ payment.current_tenant.user.get_full_name }}</h3>
@@ -108,8 +108,8 @@
     </div>
     
     <!-- Modal for this payment -->
-    <div id="modal-{{ payment.id }}" class="fixed inset-0 z-50 hidden bg-black bg-opacity-75 flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+    <div id="modal-{{ payment.id }}" class="fixed inset-0 z-[100] hidden owner-modal-overlay flex items-center justify-center p-4">
+        <div class="owner-modal-panel bg-white max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                 <h3 class="font-bold text-lg text-gray-900">Payment Proof Verification</h3>
                 <button onclick="closeVerificationModal('modal-{{ payment.id }}')" class="text-gray-400 hover:text-gray-600 p-1">
@@ -224,13 +224,20 @@
 
 <script>
     function openVerificationModal(modalId) {
-        document.getElementById(modalId).classList.remove('hidden');
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        if (modal.parentElement !== document.body) {
+            document.body.appendChild(modal);
+        }
+        modal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
     }
     
     function closeVerificationModal(modalId) {
-        document.getElementById(modalId).classList.add('hidden');
-        document.body.style.overflow = 'auto';
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
     }
     
     function toggleRejection(paymentId) {

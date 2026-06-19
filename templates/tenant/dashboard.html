@@ -1,165 +1,142 @@
-{% extends 'layouts/base.html' %}
+{% extends 'layouts/tenant_base.html' %}
 
-{% block title %}Tenant Dashboard - PG Management{% endblock %}
+{% block title %}Dashboard · Stayi Tenant{% endblock %}
 
-{% block content %}
-<div class="mb-8 flex justify-between items-end">
+{% block tenant_content %}
+<header class="owner-page-header">
     <div>
-        <h1 class="text-3xl font-black text-gray-900 tracking-tight">Welcome, {{ user.first_name }}</h1>
-        <p class="text-gray-500 font-medium mt-1">{{ property.name }} - Room {{ room.room_number }}</p>
+        <h1 class="owner-page-title">Welcome, {{ user.first_name }}</h1>
+        <p class="owner-page-description">{{ property.name }} · Room {{ room.room_number }}</p>
     </div>
-    
-    <a href="{% url 'tenant_payment_intent' %}" class="btn-primary flex items-center shadow-md">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-        </svg>
-        Pay Rent
-    </a>
-</div>
+    <div class="owner-page-actions">
+        <a href="{% url 'tenant_payment_intent' %}" class="owner-btn owner-btn-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            Pay Rent
+        </a>
+    </div>
+</header>
 
 {% if request.user.tenant_profile.payments.all %}
     {% for payment in request.user.tenant_profile.payments.all %}
         {% if payment.status == 'IN_VERIFICATION' %}
-        <div class="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded-md shadow-sm">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <svg class="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                    </svg>
-                </div>
-                <div class="ml-3">
-                    <p class="text-sm text-blue-700 font-medium">
-                        You have a payment of ₹{{ payment.amount }} pending verification by the owner. <a href="{% url 'tenant_payment_history' %}" class="underline hover:text-blue-900">View History</a>
-                    </p>
-                </div>
-            </div>
+        <div class="owner-alert owner-alert-info mb-6">
+            <svg class="h-5 w-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span>You have a payment of ₹{{ payment.amount }} pending verification. <a href="{% url 'tenant_payment_history' %}" class="font-semibold underline">View history</a></span>
         </div>
         {% elif payment.status == 'REJECTED' %}
-        <div class="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-md shadow-sm">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div class="flex items-start sm:items-center">
-                    <div class="flex-shrink-0 mt-0.5 sm:mt-0">
-                        <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                        </svg>
-                    </div>
-                    <div class="ml-3">
-                        <p class="text-sm text-red-700 font-medium">
-                            Your payment of ₹{{ payment.amount }} was rejected by the owner.
-                        </p>
-                        {% if payment.proof.rejection_reason %}
-                        <p class="text-xs text-red-600 mt-1">Reason: {{ payment.proof.rejection_reason }}</p>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="ml-8 sm:ml-0">
-                    <a href="{% url 'tenant_payment_page' payment.id %}" class="inline-block bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow transition">
-                        Re-upload Proof
-                    </a>
+        <div class="owner-alert owner-alert-error mb-6 flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="flex gap-3">
+                <svg class="h-5 w-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <div>
+                    <span>Your payment of ₹{{ payment.amount }} was rejected.</span>
+                    {% if payment.proof.rejection_reason %}
+                    <span class="block text-sm mt-1">Reason: {{ payment.proof.rejection_reason }}</span>
+                    {% endif %}
                 </div>
             </div>
+            <a href="{% url 'tenant_payment_page' payment.id %}" class="owner-btn owner-btn-danger bg-red-600 text-white border-red-600 hover:bg-red-700 shrink-0">Re-upload Proof</a>
         </div>
         {% endif %}
     {% endfor %}
 {% endif %}
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-    <div class="card p-6 border-l-4 border-l-blue-500">
-        <div class="text-gray-500 text-sm font-semibold uppercase tracking-wider mb-1">Your Details</div>
-        <div class="space-y-3 mt-4">
-            <div class="flex justify-between">
-                <span class="text-gray-500 font-medium">Room</span>
-                <span class="font-bold text-gray-900">{{ room.room_number }} {% if room.is_ac %}(AC){% else %}(Non-AC){% endif %}</span>
+<section class="owner-kpi-grid mb-8">
+    <article class="owner-kpi-card">
+        <div class="owner-kpi-top">
+            <div>
+                <div class="owner-kpi-label">Your Room</div>
+                <div class="owner-kpi-value text-2xl">{{ room.room_number }}</div>
+                <div class="owner-kpi-meta">{% if room.is_ac %}AC{% else %}Non-AC{% endif %} · Joined {{ tenant.date_of_joining|date:"M d, Y" }}</div>
             </div>
-            <div class="flex justify-between">
-                <span class="text-gray-500 font-medium">Joined on</span>
-                <span class="font-bold text-gray-900">{{ tenant.date_of_joining|date:"M d, Y" }}</span>
-            </div>
-            <div class="flex justify-between">
-                <span class="text-gray-500 font-medium">Security Deposit</span>
-                <span class="font-bold text-gray-900">₹{{ tenant.deposit_amount }}</span>
+            <div class="owner-kpi-icon bg-indigo-50 text-indigo-600">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5"/></svg>
             </div>
         </div>
-    </div>
-    
-    <div class="card p-6 border-l-4 border-l-red-500">
-        <div class="text-gray-500 text-sm font-semibold uppercase tracking-wider mb-1">Total Outstanding Due</div>
-        <div class="text-4xl font-black text-gray-900 mt-2 text-red-600">₹{{ active_due }}</div>
-        
+        <div class="mt-4 pt-4 border-t border-slate-100 flex justify-between text-sm">
+            <span class="text-slate-500">Security Deposit</span>
+            <span class="font-bold text-slate-900">₹{{ tenant.deposit_amount }}</span>
+        </div>
+    </article>
+
+    <article class="owner-kpi-card">
+        <div class="owner-kpi-top">
+            <div>
+                <div class="owner-kpi-label">Total Outstanding</div>
+                <div class="owner-kpi-value text-red-600">₹{{ active_due }}</div>
+                <div class="owner-kpi-meta">All pending dues combined</div>
+            </div>
+            <div class="owner-kpi-icon bg-red-50 text-red-600">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+        </div>
         {% if active_due > 0 %}
-        <div class="mt-6">
-            <a href="{% url 'tenant_payment_intent' %}" class="w-full btn-primary bg-red-600 hover:bg-red-700 block text-center font-semibold text-lg py-3 rounded-xl shadow">
-                Clear Dues Now
-            </a>
-        </div>
+        <a href="{% url 'tenant_payment_intent' %}" class="owner-btn owner-btn-primary w-full mt-4">Clear Dues Now</a>
         {% else %}
-        <div class="mt-6 inline-flex items-center text-emerald-600 bg-emerald-50 px-4 py-2 rounded-lg font-medium">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            All dues cleared!
-        </div>
+        <div class="owner-badge owner-badge-success mt-4">All dues cleared</div>
         {% endif %}
-    </div>
+    </article>
 
-    <div class="card p-6 border-l-4 border-l-amber-500">
-        <div class="text-gray-500 text-sm font-semibold uppercase tracking-wider mb-1">Ad-hoc Pending Dues</div>
-        <div class="text-3xl font-black text-gray-900 mt-2 text-amber-600">₹{{ pending_tenant_dues_total }}</div>
-        <div class="mt-4 text-sm text-gray-600 font-medium">
-            <span class="font-bold text-gray-900">{{ pending_tenant_dues_count }}</span> Pending Due(s)
+    <article class="owner-kpi-card">
+        <div class="owner-kpi-top">
+            <div>
+                <div class="owner-kpi-label">Ad-hoc Pending</div>
+                <div class="owner-kpi-value text-amber-600">₹{{ pending_tenant_dues_total }}</div>
+                <div class="owner-kpi-meta">{{ pending_tenant_dues_count }} pending due(s)</div>
+            </div>
+            <div class="owner-kpi-icon bg-amber-50 text-amber-600">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
         </div>
-    </div>
-</div>
+    </article>
+</section>
 
-<div class="mt-8 card overflow-hidden">
-    <div class="px-6 py-5 border-b border-gray-100 bg-gray-50">
-        <h3 class="text-lg font-bold text-gray-900">Your Dues List</h3>
+<section class="owner-panel">
+    <div class="owner-panel-header">
+        <h2 class="owner-panel-title">Your Dues List</h2>
     </div>
-    <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+    <div class="owner-table-wrap">
+        <table class="owner-table">
+            <thead>
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
+                    <th>Reason</th>
+                    <th>Amount</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                    <th>Notes</th>
                 </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
+            <tbody>
                 {% for due in tenant_dues %}
-                <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {% if due.reason == 'OTHER' %}
-                            {{ due.custom_reason }}
-                        {% else %}
-                            {{ due.get_reason_display }}
-                        {% endif %}
+                <tr>
+                    <td class="font-medium text-slate-900">
+                        {% if due.reason == 'OTHER' %}{{ due.custom_reason }}{% else %}{{ due.get_reason_display }}{% endif %}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">₹{{ due.amount }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ due.due_date|date:"M d, Y" }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap">
+                    <td class="font-semibold">₹{{ due.amount }}</td>
+                    <td>{{ due.due_date|date:"M d, Y" }}</td>
+                    <td>
                         {% if due.status == 'PENDING' %}
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Pending</span>
+                        <span class="owner-badge owner-badge-danger">Pending</span>
                         {% elif due.status == 'PARTIAL' %}
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Partial</span>
+                        <span class="owner-badge owner-badge-warning">Partial</span>
                         {% else %}
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Cleared</span>
+                        <span class="owner-badge owner-badge-success">Cleared</span>
                         {% endif %}
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title="{{ due.description }}">
-                        {{ due.description|default:"-" }}
-                    </td>
+                    <td class="text-slate-500 max-w-xs truncate" title="{{ due.description }}">{{ due.description|default:"-" }}</td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="5" class="px-6 py-10 text-center text-gray-500">
-                        <p>No dues recorded.</p>
+                    <td colspan="5">
+                        <div class="owner-empty py-10">
+                            <p class="owner-empty-text">No dues recorded. You're all caught up.</p>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
-</div>
+</section>
 {% endblock %}

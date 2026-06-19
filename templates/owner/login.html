@@ -1,29 +1,63 @@
 {% extends 'layouts/base.html' %}
+{% load static %}
 
-{% block title %}Owner Login - PG Management{% endblock %}
+{% block title %}Owner Login · Stayi{% endblock %}
+{% block body_class %}bg-slate-950 antialiased{% endblock %}
+{% block navbar %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'css/owner-portal.css' %}?v=1" rel="stylesheet">
+<style>
+    .owner-login-shell {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1rem;
+        background: radial-gradient(circle at top, rgba(99, 102, 241, 0.18), transparent 45%), #020617;
+    }
+    .owner-login-card {
+        width: 100%;
+        max-width: 28rem;
+        padding: 2rem;
+        border-radius: 1.25rem;
+        background: rgba(255, 255, 255, 0.98);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 25px 50px -12px rgba(2, 6, 23, 0.65);
+    }
+    .owner-login-shell .input-field {
+        border-color: #e2e8f0;
+        border-radius: 0.75rem;
+    }
+</style>
+{% endblock %}
+
+{% block main_class %}flex-grow w-full max-w-none p-0{% endblock %}
 
 {% block content %}
-<div class="max-w-md mx-auto mt-20">
-    <div class="card p-8">
+<div class="owner-login-shell">
+    <div class="owner-login-card">
         <div class="text-center mb-8">
-            <h2 class="text-3xl font-black text-gray-900 mb-2">Owner Login</h2>
-            <p class="text-gray-500 font-medium">Welcome back! Manage your properties.</p>
+            <div class="owner-sidebar-logo mx-auto mb-4">S</div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Stayi Owner Portal</h1>
+            <p class="text-slate-500 mt-2">Sign in to manage your properties.</p>
         </div>
-        
+
         <form method="POST" class="space-y-5" data-stayi-loading="Signing in...">
             {% csrf_token %}
-            
+
             {% for field in form %}
             <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1">{{ field.label }}</label>
+                <label class="owner-form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
                 {{ field }}
                 {% if field.errors %}
-                <p class="text-sm text-red-600 mt-1">{{ field.errors.0 }}</p>
+                <p class="owner-form-error">{{ field.errors.0 }}</p>
                 {% endif %}
             </div>
             {% endfor %}
-            
-            <button type="submit" class="w-full btn-primary py-3 font-semibold text-lg shadow-md hover:shadow-lg mt-4">
+
+            <button type="submit" class="owner-btn owner-btn-primary w-full py-3 text-base mt-2">
                 Sign In to Dashboard
             </button>
         </form>
