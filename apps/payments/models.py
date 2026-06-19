@@ -138,7 +138,7 @@ class Payment(models.Model):
 class PaymentProof(models.Model):
     payment = models.OneToOneField(Payment, on_delete=models.CASCADE, related_name='proof')
     screenshot = models.ImageField(upload_to=get_payment_screenshot_upload_path, validators=[validate_file_size, validate_image_extension])
-    utr_number = models.CharField(max_length=50)
+    upi_payment_date = models.DateField(help_text='Date when the UPI payment was completed')
     uploaded_at = models.DateTimeField(auto_now_add=True)
     verified_by = models.ForeignKey('accounts.CustomUser', null=True, blank=True, on_delete=models.SET_NULL)
     verified_at = models.DateTimeField(null=True, blank=True)

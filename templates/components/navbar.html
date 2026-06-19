@@ -1,13 +1,13 @@
-<nav class="bg-white shadow-sm border-b border-gray-100">
+<nav class="bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100 sticky top-0 z-50">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-20">
             <div class="flex items-center">
                 <a href="{% url 'landing' %}" class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-md">
-                        P
+                    <div class="w-10 h-10 bg-gray-900 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-md">
+                        S
                     </div>
-                    <span class="text-2xl font-black bg-gradient-to-r from-primary-700 to-primary-500 bg-clip-text text-transparent tracking-tight">
-                        PG SaaS
+                    <span class="text-2xl font-semibold text-gray-900 tracking-tight">
+                        Stayi
                     </span>
                 </a>
             </div>
@@ -15,21 +15,21 @@
             <div class="flex items-center space-x-6">
                 {% if user.is_authenticated %}
                     {% if user.is_owner %}
-                        <a href="{% url 'owner_dashboard' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Dashboard</a>
-                        <a href="{% url 'properties_list' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Properties</a>
-                        <a href="{% url 'rooms_list' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Rooms</a>
-                        <a href="{% url 'tenants_list' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Tenants</a>
-                        <a href="{% url 'electricity_bills_manager' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Electricity</a>
-                        <a href="{% url 'payment_verifications' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors flex items-center">
+                        <a href="{% url 'owner_dashboard' %}" class="text-gray-600 hover:text-gray-900 font-medium transition-colors">Dashboard</a>
+                        <a href="{% url 'properties_list' %}" class="text-gray-600 hover:text-gray-900 font-medium transition-colors">Properties</a>
+                        <a href="{% url 'rooms_list' %}" class="text-gray-600 hover:text-gray-900 font-medium transition-colors">Rooms</a>
+                        <a href="{% url 'tenants_list' %}" class="text-gray-600 hover:text-gray-900 font-medium transition-colors">Tenants</a>
+                        <a href="{% url 'electricity_bills_manager' %}" class="text-gray-600 hover:text-gray-900 font-medium transition-colors">Electricity</a>
+                        <a href="{% url 'payment_verifications' %}" class="text-gray-600 hover:text-gray-900 font-medium transition-colors flex items-center">
                             Verifications
                             {% if pending_verifications_count > 0 %}
                             <span class="ml-1 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{{ pending_verifications_count }}</span>
                             {% endif %}
                         </a>
                     {% elif user.is_tenant %}
-                        <a href="{% url 'tenant_dashboard' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Dashboard</a>
-                        <a href="{% url 'tenant_payments' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Invoices</a>
-                        <a href="{% url 'tenant_payment_history' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Payment History</a>
+                        <a href="{% url 'tenant_dashboard' %}" class="text-gray-600 hover:text-gray-900 font-medium transition-colors">Dashboard</a>
+                        <a href="{% url 'tenant_payments' %}" class="text-gray-600 hover:text-gray-900 font-medium transition-colors">Invoices</a>
+                        <a href="{% url 'tenant_payment_history' %}" class="text-gray-600 hover:text-gray-900 font-medium transition-colors">Payment History</a>
                     {% endif %}
                     
                     <div class="h-8 w-px bg-gray-200 mx-2"></div>
@@ -44,9 +44,8 @@
                         </a>
                     </div>
                 {% else %}
-                    <a href="{% url 'tenant_login' %}" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">Tenant Login</a>
-                    <a href="{% url 'owner_login' %}" class="px-6 py-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-all shadow-md hover:shadow-lg font-medium">
-                        Owner Login
+                    <a href="{% url 'tenant_login' %}" class="px-6 py-2.5 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-all shadow-md font-medium">
+                        Tenant Login
                     </a>
                 {% endif %}
             </div>

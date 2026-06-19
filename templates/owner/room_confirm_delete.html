@@ -5,7 +5,7 @@
 {% block content %}
 <div class="mb-6">
     <div class="flex items-center space-x-2 text-sm text-gray-500 mb-2">
-        <a href="{% url 'rooms_list' %}" class="hover:text-primary-600">Rooms</a>
+        <a href="{% if return_property_id %}{% url 'rooms_list' %}?property={{ return_property_id }}{% else %}{% url 'rooms_list' %}{% endif %}" class="hover:text-primary-600">Rooms</a>
         <span>/</span>
         <span class="text-gray-900 font-medium">Delete Room {{ room.room_number }}</span>
     </div>
@@ -31,7 +31,7 @@
         
         <form method="post" class="mt-8 flex justify-center space-x-3">
             {% csrf_token %}
-            <a href="{% url 'rooms_list' %}" class="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+            <a href="{% if return_property_id %}{% url 'rooms_list' %}?property={{ return_property_id }}{% else %}{% url 'rooms_list' %}{% endif %}" class="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                 Cancel, keep it
             </a>
             <button type="submit" class="px-4 py-2 bg-red-600 text-white shadow-sm text-sm font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500" {% if room.occupied_beds > 0 %}disabled title="Cannot delete room with active tenants"{% endif %}>

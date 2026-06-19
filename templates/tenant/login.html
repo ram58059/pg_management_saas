@@ -10,7 +10,7 @@
             <p class="text-gray-500 font-medium">Access your portal to pay rent and view details.</p>
         </div>
         
-        <form method="POST" class="space-y-5">
+        <form method="POST" class="space-y-5" data-stayi-loading="Signing in...">
             {% csrf_token %}
             
             {% for field in form %}

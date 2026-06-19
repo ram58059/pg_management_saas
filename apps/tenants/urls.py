@@ -2,6 +2,8 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path('tenant-onboarding/', views.public_tenant_onboard, name='tenant_onboarding'),
+    path('onboard/', views.public_tenant_onboard, name='tenant_onboard'),
     path('owner/tenants/', views.tenants_list, name='tenants_list'),
     path('owner/tenants/add/', views.tenant_create, name='tenant_create'),
     path('owner/tenants/<int:pk>/shift/', views.tenant_shift, name='tenant_shift'),

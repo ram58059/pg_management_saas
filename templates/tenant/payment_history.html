@@ -22,7 +22,7 @@
                     <th class="p-4">Date</th>
                     <th class="p-4">For Month</th>
                     <th class="p-4">Amount</th>
-                    <th class="p-4">UTR Number</th>
+                    <th class="p-4">UPI Payment Date</th>
                     <th class="p-4">Status</th>
                     <th class="p-4 text-right">Action</th>
                 </tr>
@@ -33,9 +33,9 @@
                     <td class="p-4 font-medium text-gray-900">{{ payment.payment_date|date:"d M Y" }}</td>
                     <td class="p-4 text-gray-600">{{ payment.invoice.billing_month|date:"M Y" }}</td>
                     <td class="p-4 font-bold text-gray-900">₹{{ payment.amount }}</td>
-                    <td class="p-4 font-mono text-sm text-gray-500">
-                        {% if payment.proof %}
-                            {{ payment.proof.utr_number }}
+                    <td class="p-4 text-sm text-gray-600">
+                        {% if payment.proof and payment.proof.upi_payment_date %}
+                            {{ payment.proof.upi_payment_date|date:"d M Y" }}
                         {% else %}
                             <span class="text-gray-400 italic">Not provided</span>
                         {% endif %}

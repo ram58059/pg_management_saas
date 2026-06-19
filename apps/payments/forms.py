@@ -29,11 +29,23 @@ class InvoiceForm(forms.ModelForm):
 class PaymentProofForm(forms.ModelForm):
     class Meta:
         model = PaymentProof
-        fields = ['screenshot', 'utr_number']
+        fields = ['screenshot', 'upi_payment_date']
+        labels = {
+            'upi_payment_date': 'UPI Payment Date',
+        }
         widgets = {
             'screenshot': forms.FileInput(attrs={'class': 'input-field mt-1 block w-full', 'accept': 'image/jpeg,image/png,image/webp'}),
-            'utr_number': forms.TextInput(attrs={'class': 'input-field mt-1 block w-full', 'placeholder': 'e.g., 123456789012'}),
+            'upi_payment_date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'input-field mt-1 block w-full',
+            }),
         }
+
+    def clean_upi_payment_date(self):
+        upi_payment_date = self.cleaned_data.get('upi_payment_date')
+        if not upi_payment_date:
+            raise forms.ValidationError('Please enter the date when you completed the UPI payment.')
+        return upi_payment_date
 
     def clean_screenshot(self):
         screenshot = self.cleaned_data.get('screenshot')

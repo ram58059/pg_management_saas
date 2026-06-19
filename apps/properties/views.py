@@ -1,8 +1,23 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.urls import reverse
 from .models import Property, Room
 from .forms import PropertyForm, RoomForm
+
+
+def _rooms_list_url(property_id=None):
+    base_url = reverse('rooms_list')
+    if property_id:
+        return f'{base_url}?property={property_id}'
+    return base_url
+
+
+def _resolve_property_id(*candidates):
+    for value in candidates:
+        if value:
+            return int(value)
+    return None
 
 @login_required
 def properties_list(request):
@@ -97,14 +112,26 @@ def room_create(request):
         
     if request.method == 'POST':
         form = RoomForm(request.user.pg_owner_profile, request.POST)
+        return_property_id = _resolve_property_id(
+            request.POST.get('return_property'),
+            request.POST.get('pg_property'),
+            request.GET.get('property'),
+        )
         if form.is_valid():
             room = form.save()
             messages.success(request, f"Room {room.room_number} added successfully.")
-            return redirect('rooms_list')
+            return redirect(_rooms_list_url(room.pg_property_id))
     else:
         form = RoomForm(request.user.pg_owner_profile)
-        
-    return render(request, 'owner/room_form.html', {'form': form, 'title': 'Add Room'})
+        return_property_id = _resolve_property_id(request.GET.get('property'))
+        if return_property_id:
+            form.fields['pg_property'].initial = return_property_id
+
+    return render(request, 'owner/room_form.html', {
+        'form': form,
+        'title': 'Add Room',
+        'return_property_id': return_property_id,
+    })
 
 @login_required
 def room_update(request, pk):
@@ -112,17 +139,26 @@ def room_update(request, pk):
         return redirect('tenant_dashboard')
         
     room = get_object_or_404(Room, pk=pk, pg_property__owner=request.user.pg_owner_profile)
-    
+    return_property_id = _resolve_property_id(
+        request.GET.get('property'),
+        request.POST.get('return_property'),
+        room.pg_property_id,
+    )
+
     if request.method == 'POST':
         form = RoomForm(request.user.pg_owner_profile, request.POST, instance=room)
         if form.is_valid():
-            form.save()
+            room = form.save()
             messages.success(request, f"Room {room.room_number} updated successfully.")
-            return redirect('rooms_list')
+            return redirect(_rooms_list_url(room.pg_property_id))
     else:
         form = RoomForm(request.user.pg_owner_profile, instance=room)
-        
-    return render(request, 'owner/room_form.html', {'form': form, 'title': 'Edit Room'})
+
+    return render(request, 'owner/room_form.html', {
+        'form': form,
+        'title': 'Edit Room',
+        'return_property_id': return_property_id,
+    })
 
 @login_required
 def room_delete(request, pk):
@@ -130,10 +166,15 @@ def room_delete(request, pk):
         return redirect('tenant_dashboard')
         
     room = get_object_or_404(Room, pk=pk, pg_property__owner=request.user.pg_owner_profile)
-    
+    property_id = room.pg_property_id
+    return_property_id = _resolve_property_id(request.GET.get('property'), property_id)
+
     if request.method == 'POST':
         room.delete()
         messages.success(request, f"Room {room.room_number} deleted successfully.")
-        return redirect('rooms_list')
-        
-    return render(request, 'owner/room_confirm_delete.html', {'room': room})
+        return redirect(_rooms_list_url(property_id))
+
+    return render(request, 'owner/room_confirm_delete.html', {
+        'room': room,
+        'return_property_id': return_property_id,
+    })

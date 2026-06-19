@@ -21,7 +21,7 @@
             </select>
         </form>
         
-        <a href="{% url 'room_create' %}" class="btn-primary flex items-center space-x-2 text-sm">
+        <a href="{% url 'room_create' %}{% if selected_property_id %}?property={{ selected_property_id }}{% endif %}" class="btn-primary flex items-center space-x-2 text-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
             <span>Add Room</span>
         </a>
@@ -84,8 +84,8 @@
                         ₹{{ room.base_rent }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <a href="{% url 'room_update' room.pk %}" class="text-primary-600 hover:text-primary-900 mr-3">Edit</a>
-                        <a href="{% url 'room_delete' room.pk %}" class="text-red-600 hover:text-red-900">Delete</a>
+                        <a href="{% url 'room_update' room.pk %}?property={{ room.pg_property.id }}" class="text-primary-600 hover:text-primary-900 mr-3">Edit</a>
+                        <a href="{% url 'room_delete' room.pk %}?property={{ room.pg_property.id }}" class="text-red-600 hover:text-red-900">Delete</a>
                     </td>
                 </tr>
                 {% empty %}

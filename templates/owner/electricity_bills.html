@@ -189,6 +189,7 @@
         try {
             const response = await fetch(window.location.href, {
                 method: 'POST',
+                stayiLoader: 'full',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': getCookie('csrftoken')

@@ -8,6 +8,8 @@ from django.db.models import Sum, Q, DecimalField
 from django.db.models.functions import Coalesce
 from .models import Tenant, TenantDue, TenantDocument
 from .forms import TenantUserForm, TenantProfileForm, TenantDueForm
+from .services.tenant_creation import create_tenant_from_forms, setup_tenant_onboarding_forms
+from .services.room_options import get_available_rooms_for_property
 from django.http import JsonResponse
 import json
 
@@ -100,56 +102,75 @@ def tenants_list(request):
 def tenant_create(request):
     if not request.user.is_owner():
         return redirect('tenant_dashboard')
-        
+
+    owner = request.user.pg_owner_profile
+
     if request.method == 'POST':
-        user_form = TenantUserForm(request.POST)
-        profile_form = TenantProfileForm(request.POST, request.FILES)
-        
+        user_form, profile_form = setup_tenant_onboarding_forms(
+            owner=owner,
+            post_data=request.POST,
+            files=request.FILES,
+        )
+
         if user_form.is_valid() and profile_form.is_valid():
-            with transaction.atomic():
-                user = user_form.save(commit=False)
-                user.set_password(user_form.cleaned_data['password'])
-                user.role = CustomUser.Role.TENANT
-                user.save()
-                
-                tenant = profile_form.save(commit=False)
-                tenant.user = user
-                tenant.save()
-                
-                id_proof_file = profile_form.cleaned_data.get('id_proof_file')
-                if id_proof_file:
-                    TenantDocument.objects.create(
-                        tenant=tenant,
-                        document_type=tenant.id_proof_type or 'ID_PROOF',
-                        file=id_proof_file
-                    )
-                
+            user, tenant, password = create_tenant_from_forms(user_form, profile_form)
             messages.success(request, f"Tenant {user.get_full_name()} onboarded successfully.")
             return redirect('tenants_list')
     else:
-        user_form = TenantUserForm()
-        profile_form = TenantProfileForm()
-        
-    # Filter properties for this owner
-    properties = Property.objects.filter(owner=request.user.pg_owner_profile)
-    profile_form.fields['pg_property'].queryset = properties
-    profile_form.fields['room'].queryset = Room.objects.none()
-        
+        user_form, profile_form = setup_tenant_onboarding_forms(owner=owner)
+
     return render(request, 'owner/tenant_form.html', {
         'user_form': user_form,
         'profile_form': profile_form,
-        'title': 'Onboard New Tenant'
+        'title': 'Onboard New Tenant',
+        'cancel_url': 'tenants_list',
     })
 
-@login_required
+
+def public_tenant_onboard(request):
+    if request.user.is_authenticated:
+        if request.user.is_owner():
+            return redirect('owner_dashboard')
+        return redirect('tenant_dashboard')
+
+    if request.method == 'POST':
+        user_form, profile_form = setup_tenant_onboarding_forms(
+            post_data=request.POST,
+            files=request.FILES,
+        )
+
+        if user_form.is_valid() and profile_form.is_valid():
+            user, tenant, password = create_tenant_from_forms(user_form, profile_form)
+            fresh_user_form, fresh_profile_form = setup_tenant_onboarding_forms()
+            return render(request, 'tenant/onboarding.html', {
+                'user_form': fresh_user_form,
+                'profile_form': fresh_profile_form,
+                'onboard_credentials': {
+                    'username': user.username,
+                    'password': password,
+                    'full_name': user.get_full_name(),
+                },
+                'show_success_modal': True,
+            })
+
+        return render(request, 'tenant/onboarding.html', {
+            'user_form': user_form,
+            'profile_form': profile_form,
+            'onboard_credentials': None,
+            'show_success_modal': False,
+        })
+
+    user_form, profile_form = setup_tenant_onboarding_forms()
+    return render(request, 'tenant/onboarding.html', {
+        'user_form': user_form,
+        'profile_form': profile_form,
+        'onboard_credentials': None,
+        'show_success_modal': False,
+    })
+
 def load_rooms(request):
     property_id = request.GET.get('property_id')
-    rooms = Room.objects.filter(pg_property_id=property_id, is_active=True).order_by('room_number')
-    
-    # Only return rooms that have available capacity
-    available_rooms = [r for r in rooms if r.available_beds > 0]
-    
-    return JsonResponse(list({'id': r.id, 'name': f"Room {r.room_number} ({r.available_beds} beds left)"} for r in available_rooms), safe=False)
+    return JsonResponse(get_available_rooms_for_property(property_id), safe=False)
 
 @login_required
 def tenant_shift(request, pk):

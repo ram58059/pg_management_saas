@@ -105,7 +105,7 @@
                     <tr>
                         <th class="py-2 px-3 rounded-l-lg">Date</th>
                         <th class="py-2 px-3">Method</th>
-                        <th class="py-2 px-3">Reference/UTR</th>
+                        <th class="py-2 px-3">UPI Payment Date</th>
                         <th class="py-2 px-3 text-right rounded-r-lg">Amount</th>
                     </tr>
                 </thead>
@@ -114,8 +114,8 @@
                     <tr>
                         <td class="py-3 px-3">{{ p.payment_date|date:"d M Y" }}</td>
                         <td class="py-3 px-3">{{ p.get_payment_method_display }}</td>
-                        <td class="py-3 px-3 font-mono text-xs">
-                            {% if p.proof %}{{ p.proof.utr_number }}{% elif p.transaction_id %}{{ p.transaction_id }}{% else %}--{% endif %}
+                        <td class="py-3 px-3 text-xs">
+                            {% if p.proof and p.proof.upi_payment_date %}{{ p.proof.upi_payment_date|date:"d M Y" }}{% elif p.transaction_id %}{{ p.transaction_id }}{% else %}--{% endif %}
                         </td>
                         <td class="py-3 px-3 text-right font-bold text-gray-900">₹{{ p.amount }}</td>
                     </tr>

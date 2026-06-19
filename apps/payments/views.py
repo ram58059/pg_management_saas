@@ -10,6 +10,7 @@ from django.db import transaction
 from django.db.models import Q, Sum
 from django.core.paginator import Paginator
 from django.http import JsonResponse
+from utils.billing import monthly_due_date
 import json
 
 @login_required
@@ -33,7 +34,7 @@ def generate_monthly_invoices(request):
             
         import datetime
         billing_date = datetime.datetime.strptime(month, '%Y-%m').date()
-        due_date = billing_date.replace(day=5)
+        due_date = monthly_due_date(billing_date)
         
         tenants = Tenant.objects.filter(pg_property__owner=request.user.pg_owner_profile, is_active=True)
         count = 0
@@ -147,7 +148,7 @@ def electricity_bills_manager(request):
                         amount=split_amount,
                         reason='ELECTRICITY',
                         description=month_identifier,
-                        due_date=timezone.now().date().replace(day=5), # default due date
+                        due_date=monthly_due_date(billing_date),
                         status='PENDING'
                     )
             

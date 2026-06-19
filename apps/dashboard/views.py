@@ -4,6 +4,7 @@ from django.db.models import Sum, Count
 from apps.properties.models import Property, Room
 from apps.tenants.models import Tenant
 from apps.payments.models import Invoice, Payment
+from apps.tenants.services.rent_dues import ensure_monthly_rent_due, sync_standard_due_dates
 import datetime
 from django.apps import apps
 
@@ -57,6 +58,8 @@ def tenant_dashboard(request):
         return redirect('owner_dashboard')
         
     tenant = request.user.tenant_profile
+    ensure_monthly_rent_due(tenant)
+    sync_standard_due_dates(tenant)
     invoices = Invoice.objects.filter(tenant=tenant).order_by('-billing_month')
     
     # Calculate active due from invoices

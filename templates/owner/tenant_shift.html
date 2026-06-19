@@ -81,7 +81,7 @@
             roomSelect.innerHTML = '<option value="">Loading...</option>';
             
             if (propertyId) {
-                fetch(`{% url 'ajax_load_rooms' %}?property_id=${propertyId}`)
+                fetch(`{% url 'ajax_load_rooms' %}?property_id=${propertyId}`, { stayiLoader: false })
                     .then(response => response.json())
                     .then(data => {
                         roomSelect.innerHTML = '<option value="">---------</option>';

@@ -9,7 +9,13 @@ def landing_page(request):
             return redirect('owner_dashboard')
         elif request.user.is_tenant():
             return redirect('tenant_dashboard')
+
     return render(request, 'landing.html')
+
+def owner_portal_entry(request):
+    if request.user.is_authenticated and request.user.is_owner():
+        return redirect('owner_dashboard')
+    return redirect('owner_login')
 
 def owner_login(request):
     if request.user.is_authenticated and request.user.is_owner():
