@@ -33,7 +33,14 @@ class Tenant(models.Model):
                 raise ValidationError({'profile_photo': 'Tenant photo is permanently locked after upload.'})
                 
     def save(self, *args, **kwargs):
-        self.full_clean()
+        # Size/extension validators read the file from storage. Skip them for
+        # already-committed photos so a missing blob cannot block unrelated
+        # updates (e.g. deactivating a tenant).
+        exclude = []
+        photo = self.profile_photo
+        if photo and getattr(photo, '_committed', False):
+            exclude.append('profile_photo')
+        self.full_clean(exclude=exclude)
         super().save(*args, **kwargs)
     
     def __str__(self):

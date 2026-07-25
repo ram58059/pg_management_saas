@@ -413,7 +413,7 @@ def api_tenant_delete(request, pk):
     
     try:
         tenant.is_active = False
-        tenant.save()
+        tenant.save(update_fields=['is_active'])
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
